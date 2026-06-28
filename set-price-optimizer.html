@@ -38,7 +38,7 @@
   .dprice{font-family:var(--num);font-size:12.5px;color:var(--ink-soft);font-variant-numeric:tabular-nums;white-space:nowrap;}
   .drow.active .dprice{color:var(--teal-deep);}
   .qctrl{display:flex;align-items:center;gap:3px;flex:0 0 auto;}
-  .qbtn{width:32px;height:32px;border:1px solid var(--line-strong);background:#fff;border-radius:8px;font-size:17px;line-height:1;cursor:pointer;color:var(--ink);display:grid;place-items:center;padding:0;}
+  .qbtn{width:42px;height:42px;border:1px solid var(--line-strong);background:#fff;border-radius:10px;font-size:22px;line-height:1;cursor:pointer;color:var(--ink);display:grid;place-items:center;padding:0;}
   .qbtn:hover{border-color:var(--teal);color:var(--teal-deep);}
   .qbtn:active{transform:scale(.94);}
   .qbtn:disabled{opacity:.35;cursor:default;border-color:var(--line);color:var(--ink-soft);}
@@ -99,8 +99,8 @@
 
   <div class="opt-row">
     <input type="checkbox" id="trane2x2">
-    <label for="trane2x2">トラネキサム酸を 250mg×2 で調剤する
-      <span class="note">該当する2種セット（シナール／ハイチオール＋トラネキサム500）が一律 +¥500。トラネキサム500を主剤とする2種セットは適用外。3種セットは同額。 ※運用ルールは要確認</span>
+    <label for="trane2x2">トラネキサム酸を 250mg×2 で用意する
+      <span class="note">該当する2種セット（シナール／ハイチオール＋トラネキサム500）が一律 +¥500。<br>トラネキサム500を主剤とする2種セットは適用外。3種セットは同額。<br>※運用ルールは要確認</span>
     </label>
   </div>
 
@@ -121,7 +121,9 @@
   </div>
 
   <div class="foot">
-    <b>仕組み：</b>選んだ薬を「単品／2種/3種/3種＋4種目追加」のあらゆる割り方で評価し、<b>合計が最安になる1通り</b>を自動確定します。セットから溢れた薬は、別のセットを組めるなら組み、無理なら単品として最も安くなる形に振り分けます。各行は「Squareでどの商品を打つか」の指示です。
+    <b>仕組み：</b>選んだ薬を「単品／2種/3種/3種＋4種目追加」のあらゆる割り方で評価し、<b>合計が最安になる1通り</b>を自動確定します。<br>
+    セットから溢れた薬は、別のセットを組めるなら組み、無理なら単品として最も安くなる形に振り分けます。<br>
+    各行は「Squareでどの商品を打つか」の指示です。
   </div>
 </div>
 
