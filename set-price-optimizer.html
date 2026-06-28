@@ -46,13 +46,13 @@
   .q{font-family:var(--num);font-size:15px;min-width:24px;text-align:center;font-variant-numeric:tabular-nums;font-weight:600;}
   .q.is0{color:#aeb6b3;font-weight:500;}
 
-  .opt-row{display:flex;align-items:flex-start;gap:10px;margin:14px 0 0;padding:11px 13px;border:1px dashed var(--line-strong);border-radius:10px;background:var(--surface);}
+  .opt-row{display:flex;align-items:flex-start;gap:10px;margin:6px 0 10px 15px;padding:11px 13px;border:1px dashed var(--line-strong);border-radius:10px;background:var(--surface);}
   .opt-row input{margin-top:3px;accent-color:var(--teal);flex:0 0 auto;}
   .opt-row label{font-size:13px;color:var(--ink);cursor:pointer;}
   .opt-row .note{display:block;color:var(--ink-soft);font-size:11.5px;margin-top:2px;}
 
   /* 下部・回答出力 */
-  .result{margin-top:26px;background:var(--surface);border:1px solid var(--line-strong);border-radius:14px;overflow:hidden;box-shadow:0 1px 0 rgba(0,0,0,.02),0 18px 40px -28px rgba(27,42,46,.35);}
+  .result{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:660px;background:var(--surface);border:1px solid var(--line-strong);border-radius:14px 14px 0 0;overflow:hidden;box-shadow:0 -6px 20px rgba(27,42,46,.1);z-index:100;display:none;}
   .result .r-head{background:var(--ink);color:#fff;padding:13px 18px;display:flex;align-items:baseline;justify-content:space-between;}
   .result .r-head .t{font-size:13px;letter-spacing:.08em;font-weight:700;}
   .result .r-head .c{font-size:11px;color:#9fb3b4;}
@@ -67,7 +67,7 @@
   .line .desc .x{font-family:var(--num);color:var(--teal-deep);font-weight:700;font-size:12px;margin-left:4px;}
   .line .desc .sub{color:var(--ink-soft);font-size:11.5px;}
   .line .amt{font-family:var(--num);font-size:14px;font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:1px;}
-  .total-box{padding:15px 18px 18px;border-top:2px solid var(--ink);}
+  .total-box{padding:15px 18px 18px;border-top:2px solid var(--ink);background:var(--surface);}
   .total-row{display:flex;justify-content:space-between;align-items:baseline;}
   .total-row .lbl{font-size:14px;font-weight:700;letter-spacing:.04em;}
   .total-row .big{font-family:var(--num);font-size:32px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em;}
@@ -97,10 +97,10 @@
 
   <div id="groups"></div>
 
-  <div class="opt-row">
+  <div class="opt-row" id="trane2x2OptRow">
     <input type="checkbox" id="trane2x2">
     <label for="trane2x2">トラネキサム酸を 250mg×2 で用意する
-      <span class="note">該当する2種セット（シナール／ハイチオール＋トラネキサム500）が一律 +¥500。<br>トラネキサム500を主剤とする2種セットは適用外。3種セットは同額。<br>※運用ルールは要確認</span>
+      <span class="note">トラネ500mg「YD」を含むセット（2種・3種）が一律 +¥500。<br>【対象2種】シナール＋トラネ500、ハイチオール＋トラネ500<br>【対象3種】シナール＋トラネ500＋トコフェロール/ハイチオール/ユベラ50/ユベラN100/ユベラN200<br>※ただし、2種セットの「トラネキサム酸＋トコフェロール」「トラネキサム酸＋ユベラ200mg」は適用外。<br>※運用ルールは要確認</span>
     </label>
   </div>
 
@@ -190,10 +190,13 @@ function solve(qty,trane2x2){
     if(ix[a]==null||ix[b]==null||ix[c]==null)continue;
     const base={[a]:1,[b]:1,[c]:1};
     const elig=Object.keys(DATA.add).filter(x=>ix[x]!=null&&!base[x]);
+    const hasTrane500=(a==='trane500'||b==='trane500'||c==='trane500');
+    const bumped=trane2x2&&hasTrane500;
+    const set3Price=bumped?p+500:p;
     for(let s=0;s<(1<<elig.length);s++){
-      const need=Object.assign({},base);let price=p,adds=[];
+      const need=Object.assign({},base);let price=set3Price,adds=[];
       for(let j=0;j<elig.length;j++)if(s&(1<<j)){const x=elig[j];need[x]=1;price+=DATA.add[x];adds.push(x);}
-      deals.push({need,price,kind:'set3',base:[a,b,c],basePrice:p,adds});
+      deals.push({need,price,kind:'set3',base:[a,b,c],basePrice:set3Price,adds,bumped});
     }
   }
   const byProd={};ids.forEach(id=>byProd[id]=[]);
@@ -226,6 +229,8 @@ function groupOrder(){const s=[];DATA.products.forEach(p=>{if(!s.includes(p.grou
 function renderProducts(){
   const exist=new Set(DATA.products.map(p=>p.id));
   Object.keys(qty).forEach(id=>{if(!exist.has(id))delete qty[id];});
+  const optRow = document.getElementById('trane2x2OptRow');
+  if(optRow) document.body.appendChild(optRow);
   groupsEl.innerHTML='';
   for(const g of groupOrder()){
     const wrap=document.createElement('div');wrap.className='group';
@@ -245,8 +250,14 @@ function renderProducts(){
         renderProducts();renderReceipt();
       });
       rows.appendChild(row);
+      if(p.id==='trane500'&&optRow){
+        rows.appendChild(optRow);
+      }
     }
     wrap.appendChild(rows);groupsEl.appendChild(wrap);
+  }
+  if(optRow&&optRow.parentNode===document.body){
+    groupsEl.parentNode.insertBefore(optRow,groupsEl.nextSibling);
   }
 }
 
@@ -257,7 +268,15 @@ function sig(d){return d.kind==='single'?'s:'+d.a:d.kind==='set2'?'2:'+d.a+'+'+d
 function renderReceipt(){
   const totalQ=Object.values(qty).reduce((a,b)=>a+b,0);
   document.getElementById('cnt').textContent=totalQ+' 点';
-  if(totalQ===0){linesEl.innerHTML='<div class="empty">上で薬を選ぶと<br>Squareに登録する内訳が出ます</div>';totalBox.style.display='none';return;}
+  const resultEl=document.querySelector('.result');
+  const wrapEl=document.querySelector('.wrap');
+  if(totalQ===0){
+    linesEl.innerHTML='<div class="empty">上で薬を選ぶと<br>Squareに登録する内訳が出ます</div>';
+    totalBox.style.display='none';
+    if(resultEl)resultEl.style.display='none';
+    if(wrapEl)wrapEl.style.paddingBottom='120px';
+    return;
+  }
   const t2=document.getElementById('trane2x2').checked;
   const {total,deals}=solve(qty,t2);
   const singles=Object.entries(qty).reduce((s,[id,q])=>s+P()[id].single*q,0);
@@ -273,15 +292,22 @@ function renderReceipt(){
     }else if(d.kind==='set2'){
       html+=`<div class="line"><span class="tag">2種</span><span class="desc">${nm(d.a)} ＋ ${nm(d.b)}${x}${d.bumped?'<span class="sub">（250mg×2 +¥500込み）</span>':''}</span><span class="amt">${yen(d.price*n)}</span></div>`;
     }else{
-      html+=`<div class="line"><span class="tag">3種</span><span class="desc">${d.base.map(nm).join(' ＋ ')}${x}</span><span class="amt">${yen(d.basePrice*n)}</span></div>`;
+      html+=`<div class="line"><span class="tag">3種</span><span class="desc">${d.base.map(nm).join(' ＋ ')}${x}${d.bumped?'<span class="sub">（250mg×2 +¥500込み）</span>':''}</span><span class="amt">${yen(d.basePrice*n)}</span></div>`;
       for(const a of d.adds)html+=`<div class="line"><span class="tag add">4種目+</span><span class="desc">${nm(a)} <span class="sub">追加</span>${x}</span><span class="amt">+${yen(DATA.add[a]*n)}</span></div>`;
     }
   }
   linesEl.innerHTML=html;totalBox.style.display='block';
+  if(resultEl)resultEl.style.display='block';
   document.getElementById('total').textContent=yen(total);
   document.getElementById('singlesTotal').textContent=yen(singles);
   document.getElementById('saved').textContent=yen(singles-total);
   document.getElementById('saved').parentElement.style.visibility=(singles-total)>0?'visible':'hidden';
+  if(resultEl&&wrapEl){
+    setTimeout(()=>{
+      const h=resultEl.offsetHeight;
+      wrapEl.style.paddingBottom=(h+30)+'px';
+    },0);
+  }
 }
 
 /* ====== 操作 ====== */
