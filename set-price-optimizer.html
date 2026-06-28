@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>セット会計サポート — 最安組合せ計算</title>
+<style>
+  :root{
+    --paper:#F7F8F6; --surface:#FFFFFF; --ink:#1B2A2E; --ink-soft:#5B6B6E;
+    --line:#E3E7E3; --line-strong:#CDD4CE; --teal:#0E7C7B; --teal-soft:#E4F1F0;
+    --teal-deep:#0A5C5B; --green:#2A8A4A; --amber:#B45309; --amber-soft:#FBF1E2; --red:#B42318;
+    --num: ui-monospace,"SFMono-Regular","SF Mono",Menlo,Consolas,monospace;
+    --sans: system-ui,-apple-system,"Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic",sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{font-family:var(--sans);color:var(--ink);background:var(--paper);line-height:1.55;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:660px;margin:0 auto;padding:26px 18px 120px;}
+
+  header.top{display:flex;align-items:center;gap:10px;border-bottom:2px solid var(--ink);padding-bottom:13px;margin-bottom:20px;}
+  header.top h1{font-size:19px;letter-spacing:.02em;margin:0;font-weight:700;}
+  header.top .edit-toggle{margin-left:auto;display:grid;place-items:center;width:34px;height:34px;border-radius:9px;border:1px solid var(--line-strong);background:#fff;color:var(--ink-soft);cursor:pointer;padding:0;transition:all .12s;}
+  header.top .edit-toggle svg{width:18px;height:18px;}
+  header.top .edit-toggle:hover{border-color:var(--teal);color:var(--teal-deep);}
+  header.top .edit-toggle.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+
+  .step-head{display:flex;align-items:center;gap:10px;margin:0 0 12px;}
+  .step-head .t{font-size:14px;font-weight:700;flex:1;}
+
+  .demo{font-size:12px;color:var(--teal-deep);background:none;border:1px solid var(--line-strong);border-radius:7px;padding:4px 10px;cursor:pointer;font-family:var(--sans);}
+  .demo:hover{background:var(--teal-soft);border-color:var(--teal);}
+
+  .group{margin-bottom:14px;}
+  .group-label{font-size:11px;letter-spacing:.1em;color:var(--ink-soft);font-weight:700;margin:0 0 6px 2px;}
+  .rows{display:flex;flex-direction:column;gap:6px;}
+
+  /* 1薬1行 */
+  .drow{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:0 8px 0 15px;min-height:50px;transition:border-color .12s,background .12s;}
+  .drow.active{border-color:var(--teal);background:var(--teal-soft);}
+  .drow.zero .dname{color:#6f7d80;}
+  .dname{flex:1;font-size:14px;padding:9px 0;}
+  .dprice{font-family:var(--num);font-size:12.5px;color:var(--ink-soft);font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .drow.active .dprice{color:var(--teal-deep);}
+  .qctrl{display:flex;align-items:center;gap:3px;flex:0 0 auto;}
+  .qbtn{width:32px;height:32px;border:1px solid var(--line-strong);background:#fff;border-radius:8px;font-size:17px;line-height:1;cursor:pointer;color:var(--ink);display:grid;place-items:center;padding:0;}
+  .qbtn:hover{border-color:var(--teal);color:var(--teal-deep);}
+  .qbtn:active{transform:scale(.94);}
+  .qbtn:disabled{opacity:.35;cursor:default;border-color:var(--line);color:var(--ink-soft);}
+  .qbtn:disabled:hover{border-color:var(--line);color:var(--ink-soft);transform:none;}
+  .q{font-family:var(--num);font-size:15px;min-width:24px;text-align:center;font-variant-numeric:tabular-nums;font-weight:600;}
+  .q.is0{color:#aeb6b3;font-weight:500;}
+
+  .opt-row{display:flex;align-items:flex-start;gap:10px;margin:14px 0 0;padding:11px 13px;border:1px dashed var(--line-strong);border-radius:10px;background:var(--surface);}
+  .opt-row input{margin-top:3px;accent-color:var(--teal);flex:0 0 auto;}
+  .opt-row label{font-size:13px;color:var(--ink);cursor:pointer;}
+  .opt-row .note{display:block;color:var(--ink-soft);font-size:11.5px;margin-top:2px;}
+
+  /* 下部・回答出力 */
+  .result{margin-top:26px;background:var(--surface);border:1px solid var(--line-strong);border-radius:14px;overflow:hidden;box-shadow:0 1px 0 rgba(0,0,0,.02),0 18px 40px -28px rgba(27,42,46,.35);}
+  .result .r-head{background:var(--ink);color:#fff;padding:13px 18px;display:flex;align-items:baseline;justify-content:space-between;}
+  .result .r-head .t{font-size:13px;letter-spacing:.08em;font-weight:700;}
+  .result .r-head .c{font-size:11px;color:#9fb3b4;}
+  .r-body{padding:4px 18px;}
+  .empty{padding:34px 6px;text-align:center;color:var(--ink-soft);font-size:13px;}
+  .line{display:flex;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);align-items:flex-start;}
+  .line:last-child{border-bottom:none;}
+  .line .tag{flex:0 0 auto;font-size:10px;letter-spacing:.04em;font-weight:700;padding:3px 7px;border-radius:6px;margin-top:1px;background:var(--teal-soft);color:var(--teal-deep);min-width:64px;text-align:center;}
+  .line .tag.single{background:#EEF0EE;color:var(--ink-soft);}
+  .line .tag.add{background:var(--amber-soft);color:var(--amber);}
+  .line .desc{flex:1;font-size:13.5px;line-height:1.4;}
+  .line .desc .x{font-family:var(--num);color:var(--teal-deep);font-weight:700;font-size:12px;margin-left:4px;}
+  .line .desc .sub{color:var(--ink-soft);font-size:11.5px;}
+  .line .amt{font-family:var(--num);font-size:14px;font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:1px;}
+  .total-box{padding:15px 18px 18px;border-top:2px solid var(--ink);}
+  .total-row{display:flex;justify-content:space-between;align-items:baseline;}
+  .total-row .lbl{font-size:14px;font-weight:700;letter-spacing:.04em;}
+  .total-row .big{font-family:var(--num);font-size:32px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em;}
+  .meta{display:flex;justify-content:space-between;margin-top:9px;font-size:12px;color:var(--ink-soft);}
+  .meta .save{color:var(--green);font-weight:600;}
+  .meta .num{font-family:var(--num);font-variant-numeric:tabular-nums;}
+  .actions{display:flex;gap:8px;margin-top:14px;}
+  .btn{flex:1;font-family:var(--sans);font-size:13px;font-weight:600;padding:11px;border-radius:9px;cursor:pointer;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);transition:all .12s;}
+  .btn:hover{border-color:var(--teal);color:var(--teal-deep);}
+  .btn.primary{background:var(--teal);color:#fff;border-color:var(--teal);}
+  .btn.primary:hover{background:var(--teal-deep);}
+  .btn.ghost{flex:0 0 auto;}
+
+  .foot{margin-top:16px;font-size:11.5px;color:var(--ink-soft);line-height:1.7;}
+  .foot b{color:var(--ink);}
+
+  /* editor */
+  .editor{display:none;margin-top:26px;border:1px solid var(--line-strong);border-radius:14px;background:var(--surface);overflow:hidden;}
+  .editor.open{display:block;}
+  .editor .e-head{background:#F0F3F0;border-bottom:1px solid var(--line);padding:13px 18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .editor .e-head h2{font-size:14px;margin:0;font-weight:700;}
+  .editor .e-head .desc{font-size:12px;color:var(--ink-soft);flex:1;min-width:150px;}
+  .editor .e-head .tool{font-size:12px;font-weight:600;padding:6px 11px;border-radius:7px;border:1px solid var(--line-strong);background:#fff;cursor:pointer;font-family:var(--sans);color:var(--ink);}
+  .editor .e-head .tool:hover{border-color:var(--teal);color:var(--teal-deep);}
+  .editor .e-head .tool.warn:hover{border-color:var(--red);color:var(--red);}
+  .e-body{padding:6px 18px 20px;overflow-x:auto;}
+  .e-sec{margin-top:18px;}
+  .e-sec h3{font-size:12px;letter-spacing:.06em;color:var(--ink-soft);margin:0 0 8px;font-weight:700;}
+  table.e-tbl{width:100%;border-collapse:collapse;font-size:13px;}
+  table.e-tbl td{padding:4px 5px 4px 0;vertical-align:middle;}
+  table.e-tbl input[type=text]{width:100%;min-width:110px;border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-family:var(--sans);font-size:13px;}
+  table.e-tbl input[type=number]{width:80px;border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-family:var(--num);font-size:13px;text-align:right;font-variant-numeric:tabular-nums;}
+  table.e-tbl select{border:1px solid var(--line);border-radius:6px;padding:6px 6px;font-family:var(--sans);font-size:12.5px;max-width:160px;}
+  table.e-tbl input:focus,table.e-tbl select:focus{outline:none;border-color:var(--teal);}
+  .yen-cell{white-space:nowrap;color:var(--ink-soft);}
+  .del{width:26px;height:26px;border:1px solid var(--line);background:#fff;border-radius:6px;color:var(--ink-soft);cursor:pointer;font-size:14px;line-height:1;}
+  .del:hover{border-color:var(--red);color:var(--red);}
+  .addrow{margin-top:8px;font-size:12px;font-weight:600;color:var(--teal-deep);background:var(--teal-soft);border:none;border-radius:7px;padding:6px 12px;cursor:pointer;font-family:var(--sans);}
+  .addrow:hover{background:#d4e9e8;}
+
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;opacity:0;pointer-events:none;transition:all .2s;z-index:9;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>セット会計サポート</h1>
+    <button class="edit-toggle" id="editToggle" title="価格表を編集" aria-label="価格表を編集">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
+  </header>
+
+  <div class="step-head">
+    <span class="t">販売する薬を決めて数量を調節</span>
+  </div>
+
+  <div id="groups"></div>
+
+  <div class="opt-row">
+    <input type="checkbox" id="trane2x2">
+    <label for="trane2x2">トラネキサム酸を 250mg×2 で調剤する
+      <span class="note">該当する2種セット（シナール／ハイチオール＋トラネキサム500）が一律 +¥500。トラネキサム500を主剤とする2種セットは適用外。3種セットは同額。 ※運用ルールは要確認</span>
+    </label>
+  </div>
+
+  <!-- 下部：回答出力 -->
+  <div class="result">
+    <div class="r-head"><span class="t">会計（最安）</span><span class="c" id="cnt">0 点</span></div>
+    <div class="r-body" id="lines"><div class="empty">上で薬を選ぶと<br>Squareに登録する内訳が出ます</div></div>
+    <div class="total-box" id="totalBox" style="display:none">
+      <div class="total-row"><span class="lbl">合計</span><span class="big" id="total">¥0</span></div>
+      <div class="meta">
+        <span>単品ばらし <span class="num" id="singlesTotal">¥0</span></span>
+        <span class="save">−<span class="num" id="saved">¥0</span> お得</span>
+      </div>
+      <div class="actions">
+        <button class="btn" id="clearBtn">クリア</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <b>仕組み：</b>選んだ薬を「単品／2種/3種/3種＋4種目追加」のあらゆる割り方で評価し、<b>合計が最安になる1通り</b>を自動確定します。セットから溢れた薬は、別のセットを組めるなら組み、無理なら単品として最も安くなる形に振り分けます。各行は「Squareでどの商品を打つか」の指示です。
+  </div>
+
+  <!-- 編集パネル -->
+  <div class="editor" id="editor">
+    <div class="e-head">
+      <h2>価格表の編集</h2>
+      <span class="desc">改定したら数値を直すだけ。変更は自動保存。</span>
+      <button class="tool" id="exportBtn">ファイルに保存</button>
+      <button class="tool" id="importBtn">ファイルを読み込み</button>
+      <button class="tool warn" id="resetBtn">初期値に戻す</button>
+      <input type="file" id="importFile" accept="application/json" hidden>
+    </div>
+    <div class="e-body" id="editorBody"></div>
+  </div>
+</div>
+<div class="toast" id="toast">保存しました</div>
+
+<script>
+/* ====== 既定データ（画像の価格表） ====== */
+const DEFAULTS = {
+  products:[
+    {id:'shinal',name:'シナール',single:1900,group:'主剤（C・システイン）'},
+    {id:'haichi',name:'ハイチオール',single:2100,group:'主剤（C・システイン）'},
+    {id:'haishi',name:'ハイシー顆粒',single:1900,group:'主剤（C・システイン）'},
+    {id:'trane500',name:'トラネ500mg「YD」',single:3700,group:'肝斑（トラネキサム）系'},
+    {id:'trane250',name:'トラネ250mg「YD」',single:2500,group:'肝斑（トラネキサム）系'},
+    {id:'transa250',name:'トランサミン250mg',single:2700,group:'肝斑（トラネキサム）系'},
+    {id:'transa500',name:'トランサミン500mg',single:4700,group:'肝斑（トラネキサム）系'},
+    {id:'tocoNico',name:'トコフェロール200mg',single:2200,group:'ビタミンE系'},
+    {id:'yubera50',name:'ユベラ50mg',single:2000,group:'ビタミンE系'},
+    {id:'yuberaN100',name:'ユベラN100mg',single:2200,group:'ビタミンE系'},
+    {id:'yuberaN200',name:'ユベラN200mg',single:2700,group:'ビタミンE系'},
+    {id:'noivitan',name:'ノイロビタン配合錠',single:2200,group:'その他'},
+  ],
+  sets2:[
+    ['shinal','tocoNico',3600],['shinal','trane500',4800],['shinal','trane250',4400],
+    ['shinal','transa250',4500],['shinal','transa500',6400],['shinal','haichi',3300],
+    ['shinal','yubera50',3600],['shinal','yuberaN100',3600],['shinal','yuberaN200',3900],
+    ['haichi','transa250',4000],['haichi','haishi',3300],['haichi','yuberaN200',4300],
+    ['haichi','trane500',4800],['haichi','tocoNico',3700],
+    ['trane500','tocoNico',5200],['trane500','yuberaN200',6000],
+  ],
+  sets3:[
+    ['shinal','trane500','tocoNico',5900],['shinal','trane500','haichi',5700],
+    ['shinal','trane500','yubera50',5900],['shinal','trane500','yuberaN100',6000],
+    ['shinal','trane500','yuberaN200',6400],['shinal','transa500','yuberaN200',7300],
+    ['shinal','haichi','yubera50',4700],['shinal','haichi','yuberaN100',4700],
+    ['shinal','haichi','yuberaN200',4900],['shinal','haichi','tocoNico',4600],
+  ],
+  add:{haichi:1500,tocoNico:1500,noivitan:2000},
+};
+const KEY='setOptimizerData_v2';
+const NAME_REV=2;
+const NAME_MAP={shinal:'シナール',haichi:'ハイチオール',haishi:'ハイシー顆粒',trane500:'トラネ500mg「YD」',trane250:'トラネ250mg「YD」',transa250:'トランサミン250mg',transa500:'トランサミン500mg',tocoNico:'トコフェロール200mg',yubera50:'ユベラ50mg',yuberaN100:'ユベラN100mg',yuberaN200:'ユベラN200mg',noivitan:'ノイロビタン配合錠'};
+const clone=o=>JSON.parse(JSON.stringify(o));
+
+let DATA;
+function migrate(){ if((DATA.nameRev||0)<NAME_REV){ (DATA.products||[]).forEach(p=>{ if(NAME_MAP[p.id]) p.name=NAME_MAP[p.id]; }); DATA.nameRev=NAME_REV; persist(); } }
+function loadData(){ try{const s=localStorage.getItem(KEY); if(s){DATA=JSON.parse(s); migrate(); return;}}catch(e){} DATA=clone(DEFAULTS); DATA.nameRev=NAME_REV; }
+function persist(){ try{localStorage.setItem(KEY,JSON.stringify(DATA));}catch(e){} }
+loadData();
+
+const P=()=>Object.fromEntries(DATA.products.map(p=>[p.id,p]));
+const nm=id=>(P()[id]?P()[id].name:id);
+const yen=n=>'¥'+n.toLocaleString();
+
+/* ====== 最適化：多重集合の最小コスト分割 ====== */
+function solve(qty,trane2x2){
+  const order=DATA.products.map(p=>p.id);
+  const ids=order.filter(id=>(qty[id]||0)>0);
+  if(!ids.length)return{total:0,deals:[]};
+  const ix={};ids.forEach((id,i)=>ix[id]=i);const single=P();
+  const deals=[];
+  ids.forEach(id=>deals.push({need:{[id]:1},price:single[id].single,kind:'single',a:id}));
+  for(const[a,b,p]of DATA.sets2){
+    if(a===b||!(ix[a]!=null&&ix[b]!=null))continue;
+    let price=p,bumped=false,ok=true;
+    if(trane2x2){if(a==='trane500'){ok=false;}else if(b==='trane500'){price+=500;bumped=true;}}
+    if(ok)deals.push({need:{[a]:1,[b]:1},price,kind:'set2',a,b,bumped});
+  }
+  for(const row of DATA.sets3){
+    const[a,b,c,p]=row; if(new Set([a,b,c]).size<3)continue;
+    if(ix[a]==null||ix[b]==null||ix[c]==null)continue;
+    const base={[a]:1,[b]:1,[c]:1};
+    const elig=Object.keys(DATA.add).filter(x=>ix[x]!=null&&!base[x]);
+    for(let s=0;s<(1<<elig.length);s++){
+      const need=Object.assign({},base);let price=p,adds=[];
+      for(let j=0;j<elig.length;j++)if(s&(1<<j)){const x=elig[j];need[x]=1;price+=DATA.add[x];adds.push(x);}
+      deals.push({need,price,kind:'set3',base:[a,b,c],basePrice:p,adds});
+    }
+  }
+  const byProd={};ids.forEach(id=>byProd[id]=[]);
+  deals.forEach(d=>Object.keys(d.need).forEach(id=>byProd[id].push(d)));
+  const start=ids.map(id=>qty[id]);const memo=new Map();
+  function rec(state){
+    let lo=-1;for(let i=0;i<state.length;i++){if(state[i]>0){lo=i;break;}}
+    if(lo<0)return{cost:0,deals:[]};
+    const key=state.join(',');if(memo.has(key))return memo.get(key);
+    let best={cost:Infinity,deals:null};
+    for(const d of byProd[ids[lo]]){
+      let fits=true;for(const id in d.need){if(state[ix[id]]<d.need[id]){fits=false;break;}}
+      if(!fits)continue;
+      const ns=state.slice();for(const id in d.need)ns[ix[id]]-=d.need[id];
+      const sub=rec(ns);const c=d.price+sub.cost;
+      if(c<best.cost)best={cost:c,deals:[d].concat(sub.deals)};
+    }
+    memo.set(key,best);return best;
+  }
+  const r=rec(start);return{total:r.cost,deals:r.deals};
+}
+
+/* ====== 状態 ====== */
+const qty={};
+
+/* ====== 薬リスト（1薬1行） ====== */
+const groupsEl=document.getElementById('groups');
+function groupOrder(){const s=[];DATA.products.forEach(p=>{if(!s.includes(p.group))s.push(p.group);});return s;}
+
+function renderProducts(){
+  const exist=new Set(DATA.products.map(p=>p.id));
+  Object.keys(qty).forEach(id=>{if(!exist.has(id))delete qty[id];});
+  groupsEl.innerHTML='';
+  for(const g of groupOrder()){
+    const wrap=document.createElement('div');wrap.className='group';
+    wrap.innerHTML=`<div class="group-label">${g}</div>`;
+    const rows=document.createElement('div');rows.className='rows';
+    for(const p of DATA.products.filter(p=>p.group===g)){
+      const q=qty[p.id]||0;const active=q>0;
+      const row=document.createElement('div');
+      row.className='drow '+(active?'active':'zero');row.dataset.id=p.id;
+      row.innerHTML=`<span class="dname">${p.name}</span><span class="dprice">¥${p.single.toLocaleString()}</span>`+
+        `<span class="qctrl"><button class="qbtn mn" ${active?'':'disabled'}>−</button>`+
+        `<span class="q${active?'':' is0'}">${q}</span><button class="qbtn pl">＋</button></span>`;
+      row.addEventListener('click',e=>{
+        const id=p.id;
+        if(e.target.classList.contains('pl')){ qty[id]=(qty[id]||0)+1; }
+        else if(e.target.classList.contains('mn')){ qty[id]=(qty[id]||0)-1; if(qty[id]<=0)delete qty[id]; }
+        else return;
+        renderProducts();renderReceipt();
+      });
+      rows.appendChild(row);
+    }
+    wrap.appendChild(rows);groupsEl.appendChild(wrap);
+  }
+}
+
+/* ====== 下部・回答出力 ====== */
+const linesEl=document.getElementById('lines'),totalBox=document.getElementById('totalBox');
+function sig(d){return d.kind==='single'?'s:'+d.a:d.kind==='set2'?'2:'+d.a+'+'+d.b+(d.bumped?'!':''):'3:'+d.base.join('+')+'|'+d.adds.join(',');}
+
+function renderReceipt(){
+  const totalQ=Object.values(qty).reduce((a,b)=>a+b,0);
+  document.getElementById('cnt').textContent=totalQ+' 点';
+  if(totalQ===0){linesEl.innerHTML='<div class="empty">上で薬を選ぶと<br>Squareに登録する内訳が出ます</div>';totalBox.style.display='none';return;}
+  const t2=document.getElementById('trane2x2').checked;
+  const {total,deals}=solve(qty,t2);
+  const singles=Object.entries(qty).reduce((s,[id,q])=>s+P()[id].single*q,0);
+  const map=new Map();
+  deals.forEach(d=>{const k=sig(d);if(map.has(k))map.get(k).n++;else map.set(k,{d,n:1});});
+  const rank={set3:0,set2:1,single:2};
+  const arr=[...map.values()].sort((x,y)=>rank[x.d.kind]-rank[y.d.kind]);
+  let html='';
+  for(const {d,n} of arr){
+    const x=n>1?`<span class="x">×${n}</span>`:'';
+    if(d.kind==='single'){
+      html+=`<div class="line"><span class="tag single">単品</span><span class="desc">${nm(d.a)}${x}</span><span class="amt">${yen(P()[d.a].single*n)}</span></div>`;
+    }else if(d.kind==='set2'){
+      html+=`<div class="line"><span class="tag">2種</span><span class="desc">${nm(d.a)} ＋ ${nm(d.b)}${x}${d.bumped?'<span class="sub">（250mg×2 +¥500込み）</span>':''}</span><span class="amt">${yen(d.price*n)}</span></div>`;
+    }else{
+      html+=`<div class="line"><span class="tag">3種</span><span class="desc">${d.base.map(nm).join(' ＋ ')}${x}</span><span class="amt">${yen(d.basePrice*n)}</span></div>`;
+      for(const a of d.adds)html+=`<div class="line"><span class="tag add">4種目+</span><span class="desc">${nm(a)} <span class="sub">追加</span>${x}</span><span class="amt">+${yen(DATA.add[a]*n)}</span></div>`;
+    }
+  }
+  linesEl.innerHTML=html;totalBox.style.display='block';
+  document.getElementById('total').textContent=yen(total);
+  document.getElementById('singlesTotal').textContent=yen(singles);
+  document.getElementById('saved').textContent=yen(singles-total);
+  document.getElementById('saved').parentElement.style.visibility=(singles-total)>0?'visible':'hidden';
+}
+
+/* ====== 編集パネル ====== */
+const editor=document.getElementById('editor'),editorBody=document.getElementById('editorBody');
+function opts(sel){return DATA.products.map(p=>`<option value="${p.id}" ${p.id===sel?'selected':''}>${p.name}</option>`).join('');}
+function renderEditor(){
+  let h='';
+  h+='<div class="e-sec"><h3>薬剤・単品価格</h3><table class="e-tbl"><tbody>';
+  DATA.products.forEach((p,i)=>{h+=`<tr>
+    <td><input type="text" value="${p.name.replace(/"/g,'&quot;')}" oninput="ed.pname(${i},this.value)"></td>
+    <td><input type="text" value="${p.group.replace(/"/g,'&quot;')}" oninput="ed.pgroup(${i},this.value)" style="max-width:150px"></td>
+    <td class="yen-cell">¥<input type="number" value="${p.single}" oninput="ed.psingle(${i},this.value)"></td>
+    <td><button class="del" onclick="ed.pdel(${i})">×</button></td></tr>`;});
+  h+='</tbody></table><button class="addrow" onclick="ed.padd()">＋ 薬剤を追加</button></div>';
+  h+='<div class="e-sec"><h3>2種セット価格</h3><table class="e-tbl"><tbody>';
+  DATA.sets2.forEach((r,i)=>{h+=`<tr>
+    <td><select onchange="ed.s2(${i},0,this.value)">${opts(r[0])}</select></td><td style="color:var(--ink-soft)">＋</td>
+    <td><select onchange="ed.s2(${i},1,this.value)">${opts(r[1])}</select></td>
+    <td class="yen-cell">¥<input type="number" value="${r[2]}" oninput="ed.s2(${i},2,this.value)"></td>
+    <td><button class="del" onclick="ed.s2del(${i})">×</button></td></tr>`;});
+  h+='</tbody></table><button class="addrow" onclick="ed.s2add()">＋ 2種セットを追加</button></div>';
+  h+='<div class="e-sec"><h3>3種セット価格</h3><table class="e-tbl"><tbody>';
+  DATA.sets3.forEach((r,i)=>{h+=`<tr>
+    <td><select onchange="ed.s3(${i},0,this.value)">${opts(r[0])}</select></td><td style="color:var(--ink-soft)">＋</td>
+    <td><select onchange="ed.s3(${i},1,this.value)">${opts(r[1])}</select></td><td style="color:var(--ink-soft)">＋</td>
+    <td><select onchange="ed.s3(${i},2,this.value)">${opts(r[2])}</select></td>
+    <td class="yen-cell">¥<input type="number" value="${r[3]}" oninput="ed.s3(${i},3,this.value)"></td>
+    <td><button class="del" onclick="ed.s3del(${i})">×</button></td></tr>`;});
+  h+='</tbody></table><button class="addrow" onclick="ed.s3add()">＋ 3種セットを追加</button></div>';
+  h+='<div class="e-sec"><h3>4種目以降の追加価格（3種セットにのみ加算）</h3><table class="e-tbl"><tbody>';
+  Object.entries(DATA.add).forEach(([id,price])=>{h+=`<tr>
+    <td><select onchange="ed.addProd('${id}',this.value)">${opts(id)}</select></td>
+    <td class="yen-cell">＋¥<input type="number" value="${price}" oninput="ed.addPrice('${id}',this.value)"></td>
+    <td><button class="del" onclick="ed.addDel('${id}')">×</button></td></tr>`;});
+  h+='</tbody></table><button class="addrow" onclick="ed.addAdd()">＋ 追加対象を追加</button></div>';
+  editorBody.innerHTML=h;
+}
+function refreshAll(){persist();renderProducts();renderEditor();renderReceipt();}
+const num=v=>{const n=parseInt(v,10);return isNaN(n)?0:n;};
+const newId=()=>'p'+Date.now().toString(36)+Math.floor(Math.random()*1000);
+const ed={
+  pname:(i,v)=>{DATA.products[i].name=v;persist();renderProducts();renderReceipt();},
+  pgroup:(i,v)=>{DATA.products[i].group=v||'その他';persist();renderProducts();},
+  psingle:(i,v)=>{DATA.products[i].single=num(v);persist();renderProducts();renderReceipt();},
+  pdel:(i)=>{const id=DATA.products[i].id;DATA.products.splice(i,1);DATA.sets2=DATA.sets2.filter(r=>r[0]!==id&&r[1]!==id);DATA.sets3=DATA.sets3.filter(r=>r[0]!==id&&r[1]!==id&&r[2]!==id);delete DATA.add[id];refreshAll();},
+  padd:()=>{DATA.products.push({id:newId(),name:'新しい薬剤',single:0,group:'その他'});refreshAll();},
+  s2:(i,f,v)=>{DATA.sets2[i][f]=f===2?num(v):v;persist();renderReceipt();},
+  s2del:(i)=>{DATA.sets2.splice(i,1);refreshAll();},
+  s2add:()=>{const a=DATA.products[0]?.id;DATA.sets2.push([a,a,0]);refreshAll();},
+  s3:(i,f,v)=>{DATA.sets3[i][f]=f===3?num(v):v;persist();renderReceipt();},
+  s3del:(i)=>{DATA.sets3.splice(i,1);refreshAll();},
+  s3add:()=>{const a=DATA.products[0]?.id;DATA.sets3.push([a,a,a,0]);refreshAll();},
+  addPrice:(id,v)=>{DATA.add[id]=num(v);persist();renderReceipt();},
+  addProd:(o,nv)=>{if(o===nv)return;const p=DATA.add[o];delete DATA.add[o];DATA.add[nv]=p;refreshAll();},
+  addDel:(id)=>{delete DATA.add[id];refreshAll();},
+  addAdd:()=>{const a=DATA.products.find(p=>!(p.id in DATA.add));if(a)DATA.add[a.id]=0;refreshAll();},
+};
+window.ed=ed;
+
+/* ====== 操作 ====== */
+const toast=(m)=>{const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1600);};
+document.getElementById('editToggle').addEventListener('click',e=>{
+  editor.classList.toggle('open');e.target.classList.toggle('active',editor.classList.contains('open'));
+  if(editor.classList.contains('open')){renderEditor();editor.scrollIntoView({behavior:'smooth',block:'start'});}
+});
+document.getElementById('exportBtn').addEventListener('click',()=>{
+  const blob=new Blob([JSON.stringify(DATA,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='price-table.json';a.click();URL.revokeObjectURL(a.href);toast('ファイルを保存しました');
+});
+document.getElementById('importBtn').addEventListener('click',()=>document.getElementById('importFile').click());
+document.getElementById('importFile').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.products||!d.sets2||!d.sets3||!d.add)throw 0;DATA=d;refreshAll();toast('読み込みました');}catch(err){toast('読み込めませんでした');}};
+  r.readAsText(f);e.target.value='';
+});
+document.getElementById('resetBtn').addEventListener('click',()=>{if(confirm('価格表を初期値に戻します。よろしいですか？')){DATA=clone(DEFAULTS);refreshAll();toast('初期値に戻しました');}});
+document.getElementById('clearBtn').addEventListener('click',()=>{
+  for(const k in qty)delete qty[k];document.getElementById('trane2x2').checked=false;renderProducts();renderReceipt();
+});
+document.getElementById('trane2x2').addEventListener('change',renderReceipt);
+
+renderProducts();renderReceipt();
+</script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+#!/bin/sh
+# pre-commit フック — 化けたファイル / 教訓カウント drift の commit をブロックする最後の砦。
+# 有効化: git config core.hooksPath .githooks  （リポジトリ直下で1回だけ実行）
+# 検出ロジック:
+#   - tools/lint-encoding.py     : 文字化け（U+FFFD と Type-A 孤立E）
+#   - tools/check-lesson-counts.py: 教訓数カウントの drift（.agents/lessons 変更時のみ）
+
+rc=0
+
+# Python の解決（python3 → python の順）。Windows の Microsoft Store スタブや
+# 未インストール環境では実行に失敗するため、実際に動くものだけを採用する。
+# 動く Python が無ければ「文字化けチェックは skip」して commit は止めない（誤ブロック防止）。
+PY=""
+for c in python3 python; do
+    if command -v "$c" >/dev/null 2>&1 && "$c" -c "import sys" >/dev/null 2>&1; then
+        PY="$c"
+        break
+    fi
+done
+
+if [ -z "$PY" ]; then
+    echo "⚠ pre-commit: 実行可能な Python が見つからないため、文字化け/教訓カウントの検査を skip しました。"
+    echo "  （Python を入れると tools/lint-encoding.py 等が有効化されます）"
+    exit 0
+fi
+
+"$PY" tools/lint-encoding.py --staged
+if [ "$?" -ne 0 ]; then
+    echo ""
+    echo "⛔ pre-commit: 文字化けを検出したため commit を中止しました。"
+    echo "   どうしても通す必要がある正当な表記なら、該当行に 'lint-encoding-ignore' を付けてください。"
+    rc=1
+fi
+
+# 教訓カウント整合チェック（lessons 系を触ったときだけ）
+if git diff --cached --name-only --diff-filter=ACM | grep -qE '^\.agents/lessons'; then
+    "$PY" tools/check-lesson-counts.py
+    if [ "$?" -ne 0 ]; then
+        echo ""
+        echo "⛔ pre-commit: 教訓数カウントが実数とずれています。上記に合わせて修正してください。"
+        rc=1
+    fi
+fi
+
+exit $rc

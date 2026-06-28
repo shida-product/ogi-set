@@ -1,0 +1,23 @@
+{
+  "//": "ローカル権限の雛形。このファイルをコピーして .claude/settings.local.json を作る（実体は .gitignore 済み）。",
+  "//2": "頻繁に許可する読み取り系・安全な操作だけを allow に列挙し、毎回の確認プロンプトを減らす。秘密情報や破壊的操作は列挙しないこと。",
+  "permissions": {
+    "allow": [
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git add *)",
+      "Bash(git commit -m *)",
+      "Bash(git checkout *)",
+      "Bash(git stash *)",
+      "Bash(node --check *)",
+      "Bash(python tools/lint-encoding.py*)",
+      "Bash(python tools/check-lesson-counts.py)",
+      "Bash(node .agents/tools/agents-doctor.cjs)",
+      "Bash(node .claude/hooks/skill-stats.cjs*)",
+      "Bash(ruff check*)",
+      "Bash(ruff format*)",
+      "Bash(npm run lint*)",
+      "Bash(npm run format*)"
+    ]
+  }
+}

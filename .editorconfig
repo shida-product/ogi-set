@@ -1,0 +1,20 @@
+# EditorConfig — 文字化け再発防止（charset 統一が最重要）
+# 詳細: .agents/lessons/encoding.md / pre-commit の tools/lint-encoding.py
+root = true
+
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.py]
+indent_style = space
+indent_size = 4
+
+[*.{js,jsx,ts,tsx,json,jsonc,html,css,scss,yml,yaml,toml,md,ps1,bat}]
+indent_style = space
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
