@@ -21,7 +21,8 @@ function showSidebar() {
 }
 
 /**
- * 「マスタ」シートからデータを取得し、フロントエンド用のJSONオブジェクトに変換して返します。
+ * 縦並びの「マスタ」シートからデータを動的にロードし、フロントエンド用のJSONオブジェクトに変換して返します。
+ * 見出し文字列（「単品価格」「2種セット」等）を検知してセクションを判定します。
  * @return {Object} マスタデータ
  */
 function getMasterData() {
@@ -39,45 +40,53 @@ function getMasterData() {
   var sets3 = [];
   var add = {};
 
-  // 1行目はヘッダー行のため i = 1 からループ開始
-  for (var i = 1; i < data.length; i++) {
+  var currentSection = ""; // 'products', 'sets2', 'sets3', 'add'
+
+  for (var i = 0; i < data.length; i++) {
     var row = data[i];
+    var valA = String(row[0] || "").trim();
 
-    // 商品マスタ (A〜C列: インデックス 0〜2)
-    if (row[0] && String(row[0]).trim() !== "") {
+    if (valA === "") continue;
+
+    // セクション見出しの判定（行番号に依存せず、文字部分一致で判別）
+    if (valA.indexOf("単品価格") !== -1) {
+      currentSection = "products";
+      continue;
+    }
+    if (valA.indexOf("2種セット") !== -1) {
+      currentSection = "sets2";
+      continue;
+    }
+    if (valA.indexOf("3種セット") !== -1) {
+      currentSection = "sets3";
+      continue;
+    }
+    if (valA.indexOf("追加価格") !== -1) {
+      currentSection = "add";
+      continue;
+    }
+
+    // データ行の読み取り
+    if (currentSection === "products") {
       products.push({
-        id: String(row[0]).trim(),
-        name: String(row[1]).trim(),
+        id: valA,
+        name: String(row[1] || "").trim(),
         single: Number(row[2]) || 0,
-        group: "", // カテゴリ分けは不要のため空文字に固定
+        group: "", // カテゴリ列は廃止
       });
-    }
-
-    // 2種セット (F〜H列: インデックス 5〜7)
-    if (row[5] && String(row[5]).trim() !== "" && row[6] && String(row[6]).trim() !== "") {
-      sets2.push([String(row[5]).trim(), String(row[6]).trim(), Number(row[7]) || 0]);
-    }
-
-    // 3種セット (J〜M列: インデックス 9〜12)
-    if (
-      row[9] &&
-      String(row[9]).trim() !== "" &&
-      row[10] &&
-      String(row[10]).trim() !== "" &&
-      row[11] &&
-      String(row[11]).trim() !== ""
-    ) {
-      sets3.push([
-        String(row[9]).trim(),
-        String(row[10]).trim(),
-        String(row[11]).trim(),
-        Number(row[12]) || 0,
-      ]);
-    }
-
-    // 追加価格 (O〜P列: インデックス 14〜15)
-    if (row[14] && String(row[14]).trim() !== "") {
-      add[String(row[14]).trim()] = Number(row[15]) || 0;
+    } else if (currentSection === "sets2") {
+      var valB = String(row[1] || "").trim();
+      if (valB !== "") {
+        sets2.push([valA, valB, Number(row[2]) || 0]);
+      }
+    } else if (currentSection === "sets3") {
+      var valB = String(row[1] || "").trim();
+      var valC = String(row[2] || "").trim();
+      if (valB !== "" && valC !== "") {
+        sets3.push([valA, valB, valC, Number(row[3]) || 0]);
+      }
+    } else if (currentSection === "add") {
+      add[valA] = Number(row[1]) || 0;
     }
   }
 
@@ -90,7 +99,7 @@ function getMasterData() {
 }
 
 /**
- * デフォルトデータに基づいて「マスタ」シートを自動生成し、初期設定を行います。
+ * デフォルトデータに基づいて「マスタ」シートを「縦並び」で自動生成し、初期設定を行います。
  */
 function setupMasterSheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -112,6 +121,7 @@ function setupMasterSheet() {
 
   sheet.clear();
 
+  // 初期データ
   var defaultProducts = [
     ["shinal", "シナール", 1900],
     ["haichi", "ハイチオール", 2100],
@@ -165,56 +175,60 @@ function setupMasterSheet() {
     ["noivitan", 2000],
   ];
 
-  // 1. 各テーブルのヘッダー書き込み
-  sheet.getRange("A1:C1").setValues([["商品ID", "商品名", "単品価格"]]);
-  sheet.getRange("F1:H1").setValues([["薬A_ID", "薬B_ID", "セット価格"]]);
-  sheet.getRange("J1:M1").setValues([["薬A_ID", "薬B_ID", "薬C_ID", "セット価格"]]);
-  sheet.getRange("O1:P1").setValues([["商品ID", "追加価格"]]);
+  var r = 1; // 行ポインタ
 
-  // 2. データの書き込み
-  if (defaultProducts.length > 0) {
-    sheet.getRange(2, 1, defaultProducts.length, 3).setValues(defaultProducts);
-  }
-  if (defaultSets2.length > 0) {
-    sheet.getRange(2, 6, defaultSets2.length, 3).setValues(defaultSets2);
-  }
-  if (defaultSets3.length > 0) {
-    sheet.getRange(2, 10, defaultSets3.length, 4).setValues(defaultSets3);
-  }
-  if (defaultAdd.length > 0) {
-    sheet.getRange(2, 15, defaultAdd.length, 2).setValues(defaultAdd);
-  }
+  // 1. 単品価格 (A〜C列)
+  sheet.getRange(r, 1, 1, 3).setValues([["単品価格", "", ""]]);
+  styleSectionHeader(sheet.getRange(r, 1, 1, 4), "#D4E6F1"); // 薄青
+  r++;
+  sheet.getRange(r, 1, defaultProducts.length, 3).setValues(defaultProducts);
+  r += defaultProducts.length;
 
-  // 3. ヘッダーのデザイン装飾
-  var headerBgColor = "#D4E6F1"; // 薄いブルーグレー
-  var headerRanges = ["A1:C1", "F1:H1", "J1:M1", "O1:P1"];
-  headerRanges.forEach(function (rangeStr) {
-    var range = sheet.getRange(rangeStr);
-    range.setFontWeight("bold");
-    range.setBackground(headerBgColor);
-    range.setHorizontalAlignment("center");
-  });
+  // 空行
+  r++;
 
-  // 格子線の描画
-  var lastRow = sheet.getLastRow();
-  if (lastRow > 0) {
-    sheet
-      .getRange(1, 1, lastRow, 16)
-      .setBorder(true, true, true, true, true, true, "#D0D3D4", SpreadsheetApp.BorderStyle.SOLID);
-  }
+  // 2. 2種セット (A〜C列)
+  sheet.getRange(r, 1, 1, 3).setValues([["2種セット", "", ""]]);
+  styleSectionHeader(sheet.getRange(r, 1, 1, 4), "#FCF3CF"); // 薄黄
+  r++;
+  sheet.getRange(r, 1, defaultSets2.length, 3).setValues(defaultSets2);
+  r += defaultSets2.length;
 
-  // 4. 列幅の自動調整
-  for (var col = 1; col <= 16; col++) {
+  r++;
+
+  // 3. 3種セット (A〜D列)
+  sheet.getRange(r, 1, 1, 4).setValues([["3種セット", "", "", ""]]);
+  styleSectionHeader(sheet.getRange(r, 1, 1, 4), "#D5F5E3"); // 薄緑
+  r++;
+  sheet.getRange(r, 1, defaultSets3.length, 4).setValues(defaultSets3);
+  r += defaultSets3.length;
+
+  r++;
+
+  // 4. 追加価格 (A〜B列)
+  sheet.getRange(r, 1, 1, 2).setValues([["追加価格", ""]]);
+  styleSectionHeader(sheet.getRange(r, 1, 1, 4), "#EDBB99"); // 薄オレンジ
+  r++;
+  sheet.getRange(r, 1, defaultAdd.length, 2).setValues(defaultAdd);
+  r += defaultAdd.length;
+
+  // デザイン装飾（格子線と幅自動調整）
+  sheet
+    .getRange(1, 1, r - 1, 4)
+    .setBorder(true, true, true, true, true, true, "#D0D3D4", SpreadsheetApp.BorderStyle.SOLID);
+  for (var col = 1; col <= 4; col++) {
     sheet.autoResizeColumn(col);
   }
-  // 境界列（空白列）の幅を意図的に狭めて見栄えを整える
-  sheet.setColumnWidth(5, 30);
-  sheet.setColumnWidth(9, 30);
-  sheet.setColumnWidth(14, 30);
 
-  ui.alert(
-    "初期設定完了",
-    "「マスタ」シートの生成と初期データの配置が完了しました！",
-    ui.ButtonSet.OK
-  );
+  ui.alert("初期設定完了", "「マスタ」シートを縦並び構成で自動生成しました！", ui.ButtonSet.OK);
+}
+
+/**
+ * 各見出し行のスタイルを装飾（セル結合・太字・背景色）します。
+ */
+function styleSectionHeader(range, bgColor) {
+  range.setFontWeight("bold");
+  range.setBackground(bgColor);
+  range.merge();
+  range.setHorizontalAlignment("left");
 }
