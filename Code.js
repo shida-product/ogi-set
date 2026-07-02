@@ -4,118 +4,83 @@
  */
 function onOpen() {
   var ui = SpreadsheetApp.getUi();
-  ui.createMenu("セット会計").addItem("セット会計サポートを起動", "showSidebar").addToUi();
+  ui.createMenu('セット会計')
+    .addItem('セット会計サポートを起動', 'showSidebar')
+    .addToUi();
 }
 
 /**
  * サイドバーにUI（index.html）を表示します。
  */
 function showSidebar() {
-  var html = HtmlService.createHtmlOutputFromFile("index")
-    .setTitle("セット会計サポート")
+  var html = HtmlService.createHtmlOutputFromFile('index')
+    .setTitle('セット会計サポート')
     .setWidth(400);
   SpreadsheetApp.getUi().showSidebar(html);
 }
 
 /**
- * 各マスタシートからデータを取得し、フロントエンド用のJSONオブジェクトに変換して返します。
+ * 「マスタ」シートからデータを取得し、フロントエンド用のJSONオブジェクトに変換して返します。
  * @return {Object} マスタデータ
  */
 function getMasterData() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-
-  // 各シートからデータを読み取る
-  var products = getProductsFromSheet(ss.getSheetByName("マスタ_商品"));
-  var sets2 = getSets2FromSheet(ss.getSheetByName("マスタ_2種セット"));
-  var sets3 = getSets3FromSheet(ss.getSheetByName("マスタ_3種セット"));
-  var add = getAddPricesFromSheet(ss.getSheetByName("マスタ_追加価格"));
-
+  var sheet = ss.getSheetByName('マスタ');
+  if (!sheet) {
+    console.warn('「マスタ」シートが見つかりません');
+    return { products: [], sets2: [], sets3: [], add: {} };
+  }
+  
+  var data = sheet.getDataRange().getValues();
+  
+  var products = [];
+  var sets2 = [];
+  var sets3 = [];
+  var add = {};
+  
+  // 1行目はヘッダー行のため i = 1 からループ開始
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    
+    // 商品マスタ (A〜D列: インデックス 0〜3)
+    if (row[0] && String(row[0]).trim() !== '') {
+      products.push({
+        id: String(row[0]).trim(),
+        name: String(row[1]).trim(),
+        single: Number(row[2]) || 0,
+        group: String(row[3]).trim()
+      });
+    }
+    
+    // 2種セット (F〜H列: インデックス 5〜7)
+    if (row[5] && String(row[5]).trim() !== '' && row[6] && String(row[6]).trim() !== '') {
+      sets2.push([
+        String(row[5]).trim(),
+        String(row[6]).trim(),
+        Number(row[7]) || 0
+      ]);
+    }
+    
+    // 3種セット (J〜M列: インデックス 9〜12)
+    if (row[9] && String(row[9]).trim() !== '' && row[10] && String(row[10]).trim() !== '' && row[11] && String(row[11]).trim() !== '') {
+      sets3.push([
+        String(row[9]).trim(),
+        String(row[10]).trim(),
+        String(row[11]).trim(),
+        Number(row[12]) || 0
+      ]);
+    }
+    
+    // 追加価格 (O〜P列: インデックス 14〜15)
+    if (row[14] && String(row[14]).trim() !== '') {
+      add[String(row[14]).trim()] = Number(row[15]) || 0;
+    }
+  }
+  
   return {
     products: products,
     sets2: sets2,
     sets3: sets3,
-    add: add,
+    add: add
   };
-}
-
-/**
- * 商品マスタシートから商品情報を取得します。
- * @param {Sheet} sheet 対象シート
- * @return {Array<Object>} 商品配列
- */
-function getProductsFromSheet(sheet) {
-  if (!sheet) return [];
-  var data = sheet.getDataRange().getValues();
-  var products = [];
-  // 1行目はヘッダー: [商品ID, 商品名, 単品価格, グループ]
-  for (var i = 1; i < data.length; i++) {
-    var row = data[i];
-    if (!row[0]) continue; // IDが空ならスキップ
-    products.push({
-      id: String(row[0]).trim(),
-      name: String(row[1]).trim(),
-      single: Number(row[2]) || 0,
-      group: String(row[3]).trim(),
-    });
-  }
-  return products;
-}
-
-/**
- * 2種セットマスタシートからセット情報を取得します。
- * @param {Sheet} sheet 対象シート
- * @return {Array<Array>} 2種セット配列
- */
-function getSets2FromSheet(sheet) {
-  if (!sheet) return [];
-  var data = sheet.getDataRange().getValues();
-  var sets2 = [];
-  // 1行目はヘッダー: [薬A_ID, 薬B_ID, セット価格]
-  for (var i = 1; i < data.length; i++) {
-    var row = data[i];
-    if (!row[0] || !row[1]) continue;
-    sets2.push([String(row[0]).trim(), String(row[1]).trim(), Number(row[2]) || 0]);
-  }
-  return sets2;
-}
-
-/**
- * 3種セットマスタシートからセット情報を取得します。
- * @param {Sheet} sheet 対象シート
- * @return {Array<Array>} 3種セット配列
- */
-function getSets3FromSheet(sheet) {
-  if (!sheet) return [];
-  var data = sheet.getDataRange().getValues();
-  var sets3 = [];
-  // 1行目はヘッダー: [薬A_ID, 薬B_ID, 薬C_ID, セット価格]
-  for (var i = 1; i < data.length; i++) {
-    var row = data[i];
-    if (!row[0] || !row[1] || !row[2]) continue;
-    sets3.push([
-      String(row[0]).trim(),
-      String(row[1]).trim(),
-      String(row[2]).trim(),
-      Number(row[3]) || 0,
-    ]);
-  }
-  return sets3;
-}
-
-/**
- * 追加価格マスタシートから情報を取得します。
- * @param {Sheet} sheet 対象シート
- * @return {Object} 追加価格マッピング
- */
-function getAddPricesFromSheet(sheet) {
-  if (!sheet) return {};
-  var data = sheet.getDataRange().getValues();
-  var add = {};
-  // 1行目はヘッダー: [商品ID, 追加価格]
-  for (var i = 1; i < data.length; i++) {
-    var row = data[i];
-    if (!row[0]) continue;
-    add[String(row[0]).trim()] = Number(row[1]) || 0;
-  }
-  return add;
 }
