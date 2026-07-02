@@ -400,6 +400,38 @@
           transform: rotate(360deg);
         }
       }
+      @media (max-width: 380px) {
+        .wrap {
+          padding: 10px 8px 120px;
+        }
+        .drow {
+          padding: 0 4px 0 8px;
+          gap: 6px;
+          min-height: 44px;
+        }
+        .dname {
+          font-size: 12.5px;
+        }
+        .dprice {
+          font-size: 11px;
+        }
+        .qbtn {
+          width: 32px;
+          height: 32px;
+          font-size: 18px;
+        }
+        .q {
+          font-size: 13.5px;
+          min-width: 18px;
+        }
+        .opt-row {
+          margin: 4px 0 8px 4px;
+          padding: 8px;
+        }
+        .opt-row label {
+          font-size: 12px;
+        }
+      }
     </style>
   </head>
   <body>
@@ -438,8 +470,35 @@
     </div>
 
     <div class="wrap">
-      <header class="top">
-        <h1>セット会計サポート</h1>
+      <header
+        class="top"
+        style="
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 24px;
+        "
+      >
+        <h1 style="margin: 0">セット会計サポート</h1>
+        <button
+          id="syncBtn"
+          onclick="initApp()"
+          style="
+            background: none;
+            border: 1px solid var(--line-strong);
+            border-radius: 8px;
+            padding: 4px 10px;
+            font-size: 11px;
+            cursor: pointer;
+            color: var(--ink-soft);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+          "
+        >
+          🔄 再読込
+        </button>
       </header>
 
       <div class="step-head">
@@ -808,6 +867,10 @@
       // GAS連携およびフォールバック初期化
       function initApp() {
         const isGas = typeof google !== "undefined" && google.script && google.script.run;
+        const syncBtn = document.getElementById("syncBtn");
+        if (syncBtn) {
+          syncBtn.style.display = isGas ? "flex" : "none";
+        }
         if (isGas) {
           showLoading(true);
           google.script.run
