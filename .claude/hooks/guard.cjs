@@ -21,13 +21,13 @@
  *   通過時: 出力なし
  */
 
-'use strict';
+"use strict";
 
 function emit(decision, reason) {
   process.stdout.write(
     JSON.stringify({
       hookSpecificOutput: {
-        hookEventName: 'PreToolUse',
+        hookEventName: "PreToolUse",
         permissionDecision: decision, // "deny" | "ask"
         permissionDecisionReason: reason,
       },
@@ -36,25 +36,25 @@ function emit(decision, reason) {
   process.exit(0);
 }
 
-let raw = '';
-process.stdin.setEncoding('utf8');
-process.stdin.on('data', (chunk) => (raw += chunk));
-process.stdin.on('end', () => {
-  let cmd = '';
-  let filePath = '';
+let raw = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => (raw += chunk));
+process.stdin.on("end", () => {
+  let cmd = "";
+  let filePath = "";
   try {
-    const payload = JSON.parse(raw || '{}');
+    const payload = JSON.parse(raw || "{}");
     const ti = payload.tool_input || {};
-    cmd = ti.command || '';
+    cmd = ti.command || "";
     // Edit / Write / MultiEdit / NotebookEdit はファイルパスで判定
-    filePath = ti.file_path || ti.notebook_path || '';
+    filePath = ti.file_path || ti.notebook_path || "";
   } catch (e) {
     process.exit(0); // fail-open: 解析不能なら通常フローへ
   }
 
   // ===== ファイル編集ツールの判定（Edit/Write 経由）=====
-  if (typeof filePath === 'string' && filePath) {
-    const base = filePath.replace(/\\/g, '/');
+  if (typeof filePath === "string" && filePath) {
+    const base = filePath.replace(/\\/g, "/");
 
     // DENY: 秘密情報ファイルの編集（.env / 認証情報 / 鍵）。RULES §6-2 Danger Zone #1
     //   .env.sample / .env.example / .env.template は雛形なので許可。
@@ -65,37 +65,41 @@ process.stdin.on('end', () => {
       /\.pem$/i.test(base)
     ) {
       emit(
-        'deny',
-        '秘密情報ファイルの編集は禁止（RULES §6-2 Danger Zone #1）。API キー・DB 接続・認証情報等の機密。雛形は .sample / .example に分離し、実体は手動で。'
+        "deny",
+        "秘密情報ファイルの編集は禁止（RULES §6-2 Danger Zone #1）。API キー・DB 接続・認証情報等の機密。雛形は .sample / .example に分離し、実体は手動で。"
       );
     }
 
     // ASK: CI/CD パイプライン定義の編集（RULES §6-2 Danger Zone #4）
     if (/(^|\/)\.github\/workflows\/[^/]+\.ya?ml$/i.test(base)) {
       emit(
-        'ask',
-        'CI/CD パイプライン定義の編集（RULES §6-2 Danger Zone #4）。デプロイフロー破壊の恐れ。意図的なら承認を。'
+        "ask",
+        "CI/CD パイプライン定義の編集（RULES §6-2 Danger Zone #4）。デプロイフロー破壊の恐れ。意図的なら承認を。"
       );
     }
 
     // ASK: ロックファイルの編集（RULES §6-2 Danger Zone #5）
-    if (/(^|\/)(package-lock\.json|pnpm-lock\.ya?ml|yarn\.lock|composer\.lock|poetry\.lock)$/i.test(base)) {
+    if (
+      /(^|\/)(package-lock\.json|pnpm-lock\.ya?ml|yarn\.lock|composer\.lock|poetry\.lock)$/i.test(
+        base
+      )
+    ) {
       emit(
-        'ask',
-        'ロックファイルの直接編集（RULES §6-2 Danger Zone #5）。バージョン整合性破壊の恐れ。更新はパッケージマネージャ経由で。'
+        "ask",
+        "ロックファイルの直接編集（RULES §6-2 Danger Zone #5）。バージョン整合性破壊の恐れ。更新はパッケージマネージャ経由で。"
       );
     }
   }
 
-  if (typeof cmd !== 'string' || cmd.trim() === '') process.exit(0);
+  if (typeof cmd !== "string" || cmd.trim() === "") process.exit(0);
 
   // ===== DENY（破滅的かつ不可逆・例外を作らない）=====
 
   // 1) force push / 履歴改変（特に main へ）。RULES §6-1 / §6-2 #3
   if (/git\s+push\b[^\n]*?(--force\b|--force-with-lease\b|(^|\s)-f(\s|$))/i.test(cmd)) {
     emit(
-      'deny',
-      'force push / 履歴改変は禁止（RULES §6 Danger Zone）。やむを得ない場合はバックアップブランチを作成し、ユーザーの明示許可を得てから手動で。'
+      "deny",
+      "force push / 履歴改変は禁止（RULES §6 Danger Zone）。やむを得ない場合はバックアップブランチを作成し、ユーザーの明示許可を得てから手動で。"
     );
   }
 
@@ -106,8 +110,8 @@ process.stdin.on('end', () => {
     /\b(rm|del|Remove-Item)\b[^|]*(\.env\b|secrets?\.(json|ya?ml)|\.pem\b|id_rsa\b)/i.test(cmd)
   ) {
     emit(
-      'deny',
-      '秘密情報ファイルの書き換え・削除は禁止（RULES §6-2 Danger Zone #1）。変更が必要なら手動で。'
+      "deny",
+      "秘密情報ファイルの書き換え・削除は禁止（RULES §6-2 Danger Zone #1）。変更が必要なら手動で。"
     );
   }
 
@@ -116,8 +120,8 @@ process.stdin.on('end', () => {
   // 3) あらゆる git push（main は push で自動デプロイされる構成があるため毎回確認）
   if (/git\s+push\b/i.test(cmd)) {
     emit(
-      'ask',
-      'push は明示確認の上で（RULES A5 / §6）。main への push が本番自動デプロイに繋がる構成では特に注意。差分・ブランチを確認してから承認を。'
+      "ask",
+      "push は明示確認の上で（RULES A5 / §6）。main への push が本番自動デプロイに繋がる構成では特に注意。差分・ブランチを確認してから承認を。"
     );
   }
 
@@ -128,8 +132,8 @@ process.stdin.on('end', () => {
     /git\s+checkout\s+--(\s|$)/i.test(cmd)
   ) {
     emit(
-      'ask',
-      '破壊的な git 操作（RULES §6-1）。未コミット変更を失う恐れ。実行前にバックアップブランチ作成を検討。'
+      "ask",
+      "破壊的な git 操作（RULES §6-1）。未コミット変更を失う恐れ。実行前にバックアップブランチ作成を検討。"
     );
   }
 
@@ -140,8 +144,8 @@ process.stdin.on('end', () => {
     />>?\s*['"]?\S*\.(php|css|js|jsx|ts|tsx|vue|html?|md|json|ya?ml|py|txt)\b/i.test(cmd)
   ) {
     emit(
-      'ask',
-      'PowerShell でのファイル書き換えは日本語文字化け事故の元（lessons Critical Rule #1）。ファイル編集は原則 Edit/Write ツールを使う。意図的なら承認を。'
+      "ask",
+      "PowerShell でのファイル書き換えは日本語文字化け事故の元（lessons Critical Rule #1）。ファイル編集は原則 Edit/Write ツールを使う。意図的なら承認を。"
     );
   }
 

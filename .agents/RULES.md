@@ -48,16 +48,16 @@
 
 ## 2. 絶対ルール（Always Rules）
 
-| # | ルール | 概要 |
-|---|---|---|
-| A1 | **No Placeholders** | `// ...省略...` のような省略記法でコードを返さない。コピペで動く完全なコードを出力する。 |
-| A2 | **Verification Before Done** | 完了宣言前に、要求を満たして動くか・副作用はないかを自問自答する。 |
-| A3 | **Stop & Report** | 10 ステップ超の連続ツール実行が見えたら停止し、進捗と判断ポイントを提示する。 |
-| A4 | **Assumption-Free** | 既存の構造・命名・データフローは推測で書かない。必ず既存ファイルを確認してから実装する。 |
-| A5 | **Semantic Committer** | Git コミットは Conventional Commits 準拠の日本語メッセージ。**関心事ごとに分割**し、**固まってから**コミット（逐一コミットしない）。 |
-| A6 | **ADR Manager** | DB 設計変更・新システム導入・大規模リファクタ時は `docs/adr/` に ADR を残す（プロジェクトで採用している場合）。 |
-| A7 | **Autonomous Handoff** | 作業の区切りで、指示なく `handover` を更新する。教訓・マイルストーンがあれば `lessons` / `changelog` も更新する（`session-close.md` 参照）。 |
-| A8 | **Lock Protocol** | 編集前に `state/locks.md` に追記、終了時に削除。ロック中ファイルは触らない。ロック外は並列可。 |
+| #   | ルール                       | 概要                                                                                                                                         |
+| --- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| A1  | **No Placeholders**          | `// ...省略...` のような省略記法でコードを返さない。コピペで動く完全なコードを出力する。                                                     |
+| A2  | **Verification Before Done** | 完了宣言前に、要求を満たして動くか・副作用はないかを自問自答する。                                                                           |
+| A3  | **Stop & Report**            | 10 ステップ超の連続ツール実行が見えたら停止し、進捗と判断ポイントを提示する。                                                                |
+| A4  | **Assumption-Free**          | 既存の構造・命名・データフローは推測で書かない。必ず既存ファイルを確認してから実装する。                                                     |
+| A5  | **Semantic Committer**       | Git コミットは Conventional Commits 準拠の日本語メッセージ。**関心事ごとに分割**し、**固まってから**コミット（逐一コミットしない）。         |
+| A6  | **ADR Manager**              | DB 設計変更・新システム導入・大規模リファクタ時は `docs/adr/` に ADR を残す（プロジェクトで採用している場合）。                              |
+| A7  | **Autonomous Handoff**       | 作業の区切りで、指示なく `handover` を更新する。教訓・マイルストーンがあれば `lessons` / `changelog` も更新する（`session-close.md` 参照）。 |
+| A8  | **Lock Protocol**            | 編集前に `state/locks.md` に追記、終了時に削除。ロック中ファイルは触らない。ロック外は並列可。                                               |
 
 ---
 
@@ -120,16 +120,16 @@
 
 ### 7-1. プロジェクト固有のコマンド
 
-| 対象 | コマンド | 場所 |
-|---|---|---|
-| Python 整形 | `ruff format .` | リポジトリルート |
-| Python リント | `ruff check --fix .` | リポジトリルート |
-| Web 整形 | `npm run format` | リポジトリルート（Web 資産がある場合） |
-| Web リント | `npm run lint` | リポジトリルート（Web 資産がある場合） |
-| 文字化け検査 | `python tools/lint-encoding.py` | リポジトリルート |
-| 教訓カウント整合 | `python tools/check-lesson-counts.py` | リポジトリルート（`.agents/lessons` 変更時） |
-| `.agents/` 健康診断 | `node .agents/tools/agents-doctor.cjs` | リポジトリルート（read-only） |
-| skill 使用集計 | `node .claude/hooks/skill-stats.cjs` | リポジトリルート |
+| 対象                | コマンド                               | 場所                                         |
+| ------------------- | -------------------------------------- | -------------------------------------------- |
+| Python 整形         | `ruff format .`                        | リポジトリルート                             |
+| Python リント       | `ruff check --fix .`                   | リポジトリルート                             |
+| Web 整形            | `npm run format`                       | リポジトリルート（Web 資産がある場合）       |
+| Web リント          | `npm run lint`                         | リポジトリルート（Web 資産がある場合）       |
+| 文字化け検査        | `python tools/lint-encoding.py`        | リポジトリルート                             |
+| 教訓カウント整合    | `python tools/check-lesson-counts.py`  | リポジトリルート（`.agents/lessons` 変更時） |
+| `.agents/` 健康診断 | `node .agents/tools/agents-doctor.cjs` | リポジトリルート（read-only）                |
+| skill 使用集計      | `node .claude/hooks/skill-stats.cjs`   | リポジトリルート                             |
 
 プロジェクト固有のコマンドが増えたら、この表を更新してください。
 
@@ -164,30 +164,30 @@
 
 ### 9-1. プロジェクト概要
 
-| 項目 | 内容 |
-|---|---|
-| プロジェクト名 | オオギ：セット会計サポート（最安組合せ計算ツール） |
-| 主言語 | Web（HTML / CSS / vanilla JS）。単一ファイル `set-price-optimizer.html` |
-| 本番 URL | （未設定） |
-| Danger Zone | `set-price-optimizer.html` の既存ロジック・価格計算部の無断改変、`.env`、`.github/workflows/*` |
+| 項目           | 内容                                                                                           |
+| -------------- | ---------------------------------------------------------------------------------------------- |
+| プロジェクト名 | オオギ：セット会計サポート（最安組合せ計算ツール）                                             |
+| 主言語         | Web（HTML / CSS / vanilla JS）。単一ファイル `set-price-optimizer.html`                        |
+| 本番 URL       | （未設定）                                                                                     |
+| Danger Zone    | `set-price-optimizer.html` の既存ロジック・価格計算部の無断改変、`.env`、`.github/workflows/*` |
 
 ### 9-2. Workflow Routing（着手前に何を読むか）
 
-| 作業内容 | 読み込むファイル |
-|---|---|
-| 起動・終了手順（正本） | `.agents/BOOTSTRAP.md` |
-| ツール別読み込み経路 | `.agents/ADAPTERS.md` |
-| オーケストレーション全体像 | `.agents/orchestration.md` |
-| 編集ロック・並列調整 | `.agents/state/locks.md` |
-| AI セッション運用 | `.agents/workflows/ai-session.md` |
-| 作業完了時の自律引き継ぎ | `.agents/workflows/session-close.md` |
-| Git 操作・コミット | `.agents/workflows/git-safety.md` |
-| 人間によるレビュー | `.agents/workflows/review-checklist.md` |
-| Windows で日本語ファイル操作 | `.agents/workflows/terminal-encoding.md` |
-| 推奨拡張・IDE 同期方針 | `.agents/workflows/extensions.md` |
-| hooks / pre-commit / 診断ツール | `.agents/workflows/ai-harness.md` |
+| 作業内容                        | 読み込むファイル                         |
+| ------------------------------- | ---------------------------------------- |
+| 起動・終了手順（正本）          | `.agents/BOOTSTRAP.md`                   |
+| ツール別読み込み経路            | `.agents/ADAPTERS.md`                    |
+| オーケストレーション全体像      | `.agents/orchestration.md`               |
+| 編集ロック・並列調整            | `.agents/state/locks.md`                 |
+| AI セッション運用               | `.agents/workflows/ai-session.md`        |
+| 作業完了時の自律引き継ぎ        | `.agents/workflows/session-close.md`     |
+| Git 操作・コミット              | `.agents/workflows/git-safety.md`        |
+| 人間によるレビュー              | `.agents/workflows/review-checklist.md`  |
+| Windows で日本語ファイル操作    | `.agents/workflows/terminal-encoding.md` |
+| 推奨拡張・IDE 同期方針          | `.agents/workflows/extensions.md`        |
+| hooks / pre-commit / 診断ツール | `.agents/workflows/ai-harness.md`        |
 
-| 着手内容 | 読み込むファイル |
-|---|---|
+| 着手内容                   | 読み込むファイル              |
+| -------------------------- | ----------------------------- |
 | エンコーディング・文字化け | `.agents/lessons/encoding.md` |
-| セキュリティ全般 | `.agents/lessons/security.md` |
+| セキュリティ全般           | `.agents/lessons/security.md` |

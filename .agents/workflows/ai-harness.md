@@ -10,10 +10,10 @@
 
 ## 1. 危険操作ガード（PreToolUse hook）
 
-| 項目 | 値 |
-|---|---|
-| 本体 | `.claude/hooks/guard.cjs` |
-| 配線 | `.claude/settings.json` の `hooks.PreToolUse` |
+| 項目   | 値                                                                  |
+| ------ | ------------------------------------------------------------------- |
+| 本体   | `.claude/hooks/guard.cjs`                                           |
+| 配線   | `.claude/settings.json` の `hooks.PreToolUse`                       |
 | 有効化 | Claude Code が `.claude/settings.json` を自動ロード（手動操作不要） |
 
 Bash / PowerShell / Edit / Write 等の実行内容を検査し、3 段階で判定する。
@@ -36,9 +36,9 @@ Bash / PowerShell / Edit / Write 等の実行内容を検査し、3 段階で判
 
 ## 2. commit 関所（pre-commit フック）
 
-| 項目 | 値 |
-|---|---|
-| 本体 | `.githooks/pre-commit` |
+| 項目 | 値                                                                                         |
+| ---- | ------------------------------------------------------------------------------------------ |
+| 本体 | `.githooks/pre-commit`                                                                     |
 | 検査 | `tools/lint-encoding.py`（文字化け）/ `tools/check-lesson-counts.py`（教訓カウント drift） |
 
 **有効化は各クローンで 1 回だけ**（git は既定で `.githooks` を見ないため）:
@@ -63,11 +63,11 @@ python tools/check-lesson-counts.py
 
 ## 3. skill 計測
 
-| 項目 | 値 |
-|---|---|
+| 項目   | 値                                                               |
+| ------ | ---------------------------------------------------------------- |
 | ロガー | `.claude/hooks/skill-log.cjs`（PreToolUse on Skill・非ブロック） |
-| 集計 | `.claude/hooks/skill-stats.cjs` |
-| 記録先 | `.claude/logs/skill-usage.jsonl`（gitignore 済み） |
+| 集計   | `.claude/hooks/skill-stats.cjs`                                  |
+| 記録先 | `.claude/logs/skill-usage.jsonl`（gitignore 済み）               |
 
 「どの skill が実際に効いたか / 鳴らず死蔵か」を数値化する。記録はフック導入後のみ（遡及不可）。
 

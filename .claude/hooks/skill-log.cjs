@@ -9,24 +9,24 @@
  * 限界: 記録はフック導入後のみ（遡及不可）。Skill ツール経由の発火のみ捕捉。
  */
 
-'use strict';
-const fs = require('fs');
-const path = require('path');
+"use strict";
+const fs = require("fs");
+const path = require("path");
 
-const LOG_DIR = path.resolve(__dirname, '..', 'logs'); // .claude/logs/
-const LOG = path.join(LOG_DIR, 'skill-usage.jsonl');
+const LOG_DIR = path.resolve(__dirname, "..", "logs"); // .claude/logs/
+const LOG = path.join(LOG_DIR, "skill-usage.jsonl");
 
-let raw = '';
-process.stdin.setEncoding('utf8');
-process.stdin.on('data', (c) => (raw += c));
-process.stdin.on('end', () => {
+let raw = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (c) => (raw += c));
+process.stdin.on("end", () => {
   try {
-    const p = JSON.parse(raw || '{}');
+    const p = JSON.parse(raw || "{}");
     const ti = p.tool_input || {};
-    const skill = ti.skill || ti.name || '';
+    const skill = ti.skill || ti.name || "";
     if (skill) {
       fs.mkdirSync(LOG_DIR, { recursive: true });
-      fs.appendFileSync(LOG, JSON.stringify({ ts: new Date().toISOString(), skill }) + '\n');
+      fs.appendFileSync(LOG, JSON.stringify({ ts: new Date().toISOString(), skill }) + "\n");
     }
   } catch (e) {
     /* 記録失敗は黙って無視（作業を止めない） */
