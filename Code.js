@@ -1,13 +1,6 @@
-/**
- * スプレッドシート起動時の処理。
- * カスタムメニューを追加します。
- */
 function onOpen() {
   var ui = SpreadsheetApp.getUi();
-  ui.createMenu("セット会計")
-    .addItem("セット会計サポートを起動 (大画面ダイアログ)", "showDialog")
-    .addItem("マスタシートを初期設定する", "setupMasterSheet")
-    .addToUi();
+  ui.createMenu("セット会計").addItem("セット会計サポートを起動", "showDialog").addToUi();
 
   // 起動時に自動で大画面ダイアログをポップアップ表示
   showDialog();
@@ -100,24 +93,41 @@ function getMasterData() {
   for (var i = 0; i < data.length; i++) {
     var row = data[i];
     var valA = String(row[0] || "").trim();
+    var valB = String(row[1] || "").trim();
+    var valC = String(row[2] || "").trim();
+    var valD = String(row[3] || "").trim();
 
     if (valA === "") continue;
 
-    // セクション見出しの判定（行番号に依存せず、文字部分一致で判別）
-    if (valA.indexOf("単品価格") !== -1) {
+    // ヘッダー行をパターン検知してセクションを切り替える
+    // 1. 単品価格 (A列が "商品" かつ B列が "単品" または "価格")
+    if (
+      valA.indexOf("商品") !== -1 &&
+      (valB.indexOf("単品") !== -1 || valB.indexOf("価格") !== -1)
+    ) {
       currentSection = "products";
       continue;
     }
-    if (valA.indexOf("2種セット") !== -1) {
-      currentSection = "sets2";
+    // 2. 追加価格 (A列が "商品" かつ B列が "追加")
+    if (valA.indexOf("商品") !== -1 && valB.indexOf("追加") !== -1) {
+      currentSection = "add";
       continue;
     }
-    if (valA.indexOf("3種セット") !== -1) {
+    // 3. 3種セット (A列に "薬" が含まれ、かつD列に "価格" または "セット" が含まれる)
+    if (
+      valA.indexOf("薬") !== -1 &&
+      (valD.indexOf("価格") !== -1 || valD.indexOf("セット") !== -1)
+    ) {
       currentSection = "sets3";
       continue;
     }
-    if (valA.indexOf("追加価格") !== -1) {
-      currentSection = "add";
+    // 4. 2種セット (A列が "薬" かつ C列に "価格" または "セット" が含まれ、かつD列が空)
+    if (
+      valA.indexOf("薬") !== -1 &&
+      (valC.indexOf("価格") !== -1 || valC.indexOf("セット") !== -1) &&
+      valD === ""
+    ) {
+      currentSection = "sets2";
       continue;
     }
 
@@ -158,143 +168,4 @@ function getMasterData() {
     sets3: sets3,
     add: add,
   };
-}
-
-/**
- * デフォルトデータに基づいて「マスタ」シートを「縦並び（日本語ID廃止）」で自動生成し、初期設定を行います。
- */
-function setupMasterSheet() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName("マスタ");
-  var ui = SpreadsheetApp.getUi();
-
-  if (sheet) {
-    var response = ui.alert(
-      "マスタシートの上書き確認",
-      "すでに「マスタ」シートが存在します。既存のデータをすべて消去して初期値でリセットしてもよろしいですか？",
-      ui.ButtonSet.YES_NO
-    );
-    if (response !== ui.Button.YES) {
-      return;
-    }
-  } else {
-    sheet = ss.insertSheet("マスタ");
-  }
-
-  sheet.clear();
-
-  // 初期データ (IDやグループは無く、日本語名と数値のみ)
-  var defaultProducts = [
-    ["シナール", 1900],
-    ["ハイチオール", 2100],
-    ["ハイシー顆粒", 1900],
-    ["トラネ500mg「YD」", 3900],
-    ["トラネ250mg「YD」", 2500],
-    ["トランサミン250mg", 2700],
-    ["トランサミン500mg", 4700],
-    ["トコフェロール200mg", 2200],
-    ["ユベラ50mg", 2000],
-    ["ユベラN100mg", 2200],
-    ["ユベラN200mg", 2700],
-    ["ノイロビタン配合錠", 2200],
-  ];
-
-  var defaultSets2 = [
-    ["シナール", "トコフェロール200mg", 3600],
-    ["シナール", "トラネ500mg「YD」", 4800],
-    ["シナール", "トラネ250mg「YD」", 4000],
-    ["シナール", "トランサミン250mg", 4500],
-    ["シナール", "トランサミン500mg", 6000],
-    ["シナール", "ハイチオール", 3300],
-    ["シナール", "ユベラ50mg", 3600],
-    ["シナール", "ユベラN100mg", 3600],
-    ["シナール", "ユベラN200mg", 3900],
-    ["ハイチオール", "トランサミン250mg", 4000],
-    ["ハイチオール", "ハイシー顆粒", 3000],
-    ["ハイチオール", "ユベラN200mg", 4300],
-    ["ハイチオール", "トラネ500mg「YD」", 4800],
-    ["ハイチオール", "トコフェロール200mg", 3700],
-    ["トラネ500mg「YD」", "トコフェロール200mg", 5200],
-    ["トラネ500mg「YD」", "ユベラN200mg", 6000],
-  ];
-
-  var defaultSets3 = [
-    ["シナール", "トラネ500mg「YD」", "トコフェロール200mg", 5900],
-    ["シナール", "トラネ500mg「YD」", "ハイチオール", 5900],
-    ["シナール", "トラネ500mg「YD」", "ユベラ50mg", 5900],
-    ["シナール", "トラネ500mg「YD」", "ユベラN100mg", 6200],
-    ["シナール", "トラネ500mg「YD」", "ユベラN200mg", 6400],
-    ["シナール", "トランサミン500mg", "ユベラN200mg", 7300],
-    ["シナール", "ハイチオール", "ユベラ50mg", 4700],
-    ["シナール", "ハイチオール", "ユベラN100mg", 4700],
-    ["シナール", "ハイチオール", "ユベラN200mg", 5000],
-    ["シナール", "ハイチオール", "トコフェロール200mg", 4600],
-  ];
-
-  var defaultAdd = [
-    ["ハイチオール", 1500],
-    ["トコフェロール200mg", 1500],
-    ["ノイロビタン配合錠", 2000],
-  ];
-
-  var r = 1; // 行ポインタ
-
-  // 1. 単品価格 (A〜B列)
-  sheet.getRange(r, 1, 1, 2).setValues([["商品名", "単品価格"]]);
-  styleSectionHeader(sheet.getRange(r, 1, 1, 4), "#D4E6F1"); // 薄青
-  r++;
-  sheet.getRange(r, 1, defaultProducts.length, 2).setValues(defaultProducts);
-  r += defaultProducts.length;
-
-  // 空行
-  r++;
-
-  // 2. 2種セット (A〜C列)
-  sheet.getRange(r, 1, 1, 3).setValues([["薬A", "薬B", "セット価格"]]);
-  styleSectionHeader(sheet.getRange(r, 1, 1, 4), "#FCF3CF"); // 薄黄
-  r++;
-  sheet.getRange(r, 1, defaultSets2.length, 3).setValues(defaultSets2);
-  r += defaultSets2.length;
-
-  r++;
-
-  // 3. 3種セット (A〜D列)
-  sheet.getRange(r, 1, 1, 4).setValues([["薬A", "薬B", "薬C", "セット価格"]]);
-  styleSectionHeader(sheet.getRange(r, 1, 1, 4), "#D5F5E3"); // 薄緑
-  r++;
-  sheet.getRange(r, 1, defaultSets3.length, 4).setValues(defaultSets3);
-  r += defaultSets3.length;
-
-  r++;
-
-  // 4. 追加価格 (A〜B列)
-  sheet.getRange(r, 1, 1, 2).setValues([["商品名", "追加価格"]]);
-  styleSectionHeader(sheet.getRange(r, 1, 1, 4), "#EDBB99"); // 薄オレンジ
-  r++;
-  sheet.getRange(r, 1, defaultAdd.length, 2).setValues(defaultAdd);
-  r += defaultAdd.length;
-
-  // デザイン装飾（格子線と幅自動調整）
-  sheet
-    .getRange(1, 1, r - 1, 4)
-    .setBorder(true, true, true, true, true, true, "#D0D3D4", SpreadsheetApp.BorderStyle.SOLID);
-  for (var col = 1; col <= 4; col++) {
-    sheet.autoResizeColumn(col);
-  }
-
-  ui.alert(
-    "初期設定完了",
-    "「マスタ」シートを縦並び（日本語ID廃止版）で自動生成しました！",
-    ui.ButtonSet.OK
-  );
-}
-
-/**
- * 各見出し行のスタイルを装飾（セル結合・太字・背景色）します。
- */
-function styleSectionHeader(range, bgColor) {
-  range.setFontWeight("bold");
-  range.setBackground(bgColor);
-  range.merge();
-  range.setHorizontalAlignment("left");
 }
