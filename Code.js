@@ -5,20 +5,12 @@
 function onOpen() {
   var ui = SpreadsheetApp.getUi();
   ui.createMenu("セット会計")
-    .addItem("セット会計サポートを起動 (右側サイドバー)", "showSidebar")
     .addItem("セット会計サポートを起動 (大画面ダイアログ)", "showDialog")
     .addItem("マスタシートを初期設定する", "setupMasterSheet")
     .addToUi();
-}
 
-/**
- * サイドバーにUI（index.html）を表示します。
- */
-function showSidebar() {
-  var html = HtmlService.createHtmlOutputFromFile("index")
-    .setTitle("セット会計サポート")
-    .setWidth(400);
-  SpreadsheetApp.getUi().showSidebar(html);
+  // 起動時に自動で大画面ダイアログをポップアップ表示
+  showDialog();
 }
 
 /**
@@ -26,7 +18,7 @@ function showSidebar() {
  */
 function showDialog() {
   var html = HtmlService.createHtmlOutputFromFile("index")
-    .setTitle("セット会計サポート（大画面）")
+    .setTitle("セット会計サポート")
     .setWidth(680)
     .setHeight(850);
   SpreadsheetApp.getUi().showModelessDialog(html, "セット会計サポート");
