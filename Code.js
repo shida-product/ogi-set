@@ -32,6 +32,57 @@ function showDialog() {
   SpreadsheetApp.getUi().showModelessDialog(html, "セット会計サポート");
 }
 
+// 日本語名からアルファベットのシステムIDに変換するための自動マッピングキャッシュ
+var autoIdMap = {};
+var autoIdCounter = 1;
+
+/**
+ * 日本語の商品名から、システム内部で利用するアルファベットIDを取得します。
+ * 新しい商品が手動追加された場合も自動で一意のID（item_1, item_2...）を生成します。
+ * @param {string} name 日本語の商品名
+ * @return {string} アルファベットの商品ID
+ */
+function getSystemId(name) {
+  name = String(name || "").trim();
+  if (name === "") return "";
+
+  // 標準商品のマッピング定義
+  var stdMap = {
+    シナール: "shinal",
+    ハイチオール: "haichi",
+    ハイシー顆粒: "haishi",
+    ハイシー: "haishi",
+    "トラネ500mg「YD」": "trane500",
+    トラネ500: "trane500",
+    "トラネ250mg「YD」": "trane250",
+    トラネ250: "trane250",
+    トランサミン250mg: "transa250",
+    トランサミン250: "transa250",
+    トランサミン500mg: "transa500",
+    トランサミン500: "transa500",
+    トコフェロール200mg: "tocoNico",
+    トコフェロール: "tocoNico",
+    ユベラ50mg: "yubera50",
+    ユベラ50: "yubera50",
+    ユベラN100mg: "yuberaN100",
+    ユベラN100: "yuberaN100",
+    ユベラN200mg: "yuberaN200",
+    ユベラN200: "yuberaN200",
+    ノイロビタン配合錠: "noivitan",
+    ノイロビタン: "noivitan",
+  };
+
+  if (stdMap[name]) return stdMap[name];
+
+  // 辞書にない新規の日本語名の場合は、自動でIDを割り当てて記憶する
+  if (autoIdMap[name]) return autoIdMap[name];
+
+  var newId = "item_" + autoIdCounter;
+  autoIdCounter++;
+  autoIdMap[name] = newId;
+  return newId;
+}
+
 /**
  * 縦並びの「マスタ」シートからデータを動的にロードし、フロントエンド用のJSONオブジェクトに変換して返します。
  * 見出し文字列（「単品価格」「2種セット」等）を検知してセクションを判定します。
@@ -80,25 +131,32 @@ function getMasterData() {
 
     // データ行の読み取り
     if (currentSection === "products") {
+      var sysId = getSystemId(valA);
       products.push({
-        id: valA,
-        name: String(row[1] || "").trim(),
-        single: Number(row[2]) || 0,
+        id: sysId,
+        name: valA,
+        single: Number(row[1]) || 0,
         group: "", // カテゴリ列は廃止
       });
     } else if (currentSection === "sets2") {
       var valB = String(row[1] || "").trim();
       if (valB !== "") {
-        sets2.push([valA, valB, Number(row[2]) || 0]);
+        var idA = getSystemId(valA);
+        var idB = getSystemId(valB);
+        sets2.push([idA, idB, Number(row[2]) || 0]);
       }
     } else if (currentSection === "sets3") {
       var valB = String(row[1] || "").trim();
       var valC = String(row[2] || "").trim();
       if (valB !== "" && valC !== "") {
-        sets3.push([valA, valB, valC, Number(row[3]) || 0]);
+        var idA = getSystemId(valA);
+        var idB = getSystemId(valB);
+        var idC = getSystemId(valC);
+        sets3.push([idA, idB, idC, Number(row[3]) || 0]);
       }
     } else if (currentSection === "add") {
-      add[valA] = Number(row[1]) || 0;
+      var sysId = getSystemId(valA);
+      add[sysId] = Number(row[1]) || 0;
     }
   }
 
@@ -111,7 +169,7 @@ function getMasterData() {
 }
 
 /**
- * デフォルトデータに基づいて「マスタ」シートを「縦並び」で自動生成し、初期設定を行います。
+ * デフォルトデータに基づいて「マスタ」シートを「縦並び（日本語ID廃止）」で自動生成し、初期設定を行います。
  */
 function setupMasterSheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -133,74 +191,74 @@ function setupMasterSheet() {
 
   sheet.clear();
 
-  // 初期データ
+  // 初期データ (IDやグループは無く、日本語名と数値のみ)
   var defaultProducts = [
-    ["shinal", "シナール", 1900],
-    ["haichi", "ハイチオール", 2100],
-    ["haishi", "ハイシー顆粒", 1900],
-    ["trane500", "トラネ500mg「YD」", 3900],
-    ["trane250", "トラネ250mg「YD」", 2500],
-    ["transa250", "トランサミン250mg", 2700],
-    ["transa500", "トランサミン500mg", 4700],
-    ["tocoNico", "トコフェロール200mg", 2200],
-    ["yubera50", "ユベラ50mg", 2000],
-    ["yuberaN100", "ユベラN100mg", 2200],
-    ["yuberaN200", "ユベラN200mg", 2700],
-    ["noivitan", "ノイロビタン配合錠", 2200],
+    ["シナール", 1900],
+    ["ハイチオール", 2100],
+    ["ハイシー顆粒", 1900],
+    ["トラネ500mg「YD」", 3900],
+    ["トラネ250mg「YD」", 2500],
+    ["トランサミン250mg", 2700],
+    ["トランサミン500mg", 4700],
+    ["トコフェロール200mg", 2200],
+    ["ユベラ50mg", 2000],
+    ["ユベラN100mg", 2200],
+    ["ユベラN200mg", 2700],
+    ["ノイロビタン配合錠", 2200],
   ];
 
   var defaultSets2 = [
-    ["shinal", "tocoNico", 3600],
-    ["shinal", "trane500", 4800],
-    ["shinal", "trane250", 4000],
-    ["shinal", "transa250", 4500],
-    ["shinal", "transa500", 6000],
-    ["shinal", "haichi", 3300],
-    ["shinal", "yubera50", 3600],
-    ["shinal", "yuberaN100", 3600],
-    ["shinal", "yuberaN200", 3900],
-    ["haichi", "transa250", 4000],
-    ["haichi", "haishi", 3000],
-    ["haichi", "yuberaN200", 4300],
-    ["haichi", "trane500", 4800],
-    ["haichi", "tocoNico", 3700],
-    ["trane500", "tocoNico", 5200],
-    ["trane500", "yuberaN200", 6000],
+    ["シナール", "トコフェロール200mg", 3600],
+    ["シナール", "トラネ500mg「YD」", 4800],
+    ["シナール", "トラネ250mg「YD」", 4000],
+    ["シナール", "トランサミン250mg", 4500],
+    ["シナール", "トランサミン500mg", 6000],
+    ["シナール", "ハイチオール", 3300],
+    ["シナール", "ユベラ50mg", 3600],
+    ["シナール", "ユベラN100mg", 3600],
+    ["シナール", "ユベラN200mg", 3900],
+    ["ハイチオール", "トランサミン250mg", 4000],
+    ["ハイチオール", "ハイシー顆粒", 3000],
+    ["ハイチオール", "ユベラN200mg", 4300],
+    ["ハイチオール", "トラネ500mg「YD」", 4800],
+    ["ハイチオール", "トコフェロール200mg", 3700],
+    ["トラネ500mg「YD」", "トコフェロール200mg", 5200],
+    ["トラネ500mg「YD」", "ユベラN200mg", 6000],
   ];
 
   var defaultSets3 = [
-    ["shinal", "trane500", "tocoNico", 5900],
-    ["shinal", "trane500", "haichi", 5900],
-    ["shinal", "trane500", "yubera50", 5900],
-    ["shinal", "trane500", "yuberaN100", 6200],
-    ["shinal", "trane500", "yuberaN200", 6400],
-    ["shinal", "transa500", "yuberaN200", 7300],
-    ["shinal", "haichi", "yubera50", 4700],
-    ["shinal", "haichi", "yuberaN100", 4700],
-    ["shinal", "haichi", "yuberaN200", 5000],
-    ["shinal", "haichi", "tocoNico", 4600],
+    ["シナール", "トラネ500mg「YD」", "トコフェロール200mg", 5900],
+    ["シナール", "トラネ500mg「YD」", "ハイチオール", 5900],
+    ["シナール", "トラネ500mg「YD」", "ユベラ50mg", 5900],
+    ["シナール", "トラネ500mg「YD」", "ユベラN100mg", 6200],
+    ["シナール", "トラネ500mg「YD」", "ユベラN200mg", 6400],
+    ["シナール", "トランサミン500mg", "ユベラN200mg", 7300],
+    ["シナール", "ハイチオール", "ユベラ50mg", 4700],
+    ["シナール", "ハイチオール", "ユベラN100mg", 4700],
+    ["シナール", "ハイチオール", "ユベラN200mg", 5000],
+    ["シナール", "ハイチオール", "トコフェロール200mg", 4600],
   ];
 
   var defaultAdd = [
-    ["haichi", 1500],
-    ["tocoNico", 1500],
-    ["noivitan", 2000],
+    ["ハイチオール", 1500],
+    ["トコフェロール200mg", 1500],
+    ["ノイロビタン配合錠", 2000],
   ];
 
   var r = 1; // 行ポインタ
 
-  // 1. 単品価格 (A〜C列)
-  sheet.getRange(r, 1, 1, 3).setValues([["単品価格", "", ""]]);
+  // 1. 単品価格 (A〜B列)
+  sheet.getRange(r, 1, 1, 2).setValues([["商品名", "単品価格"]]);
   styleSectionHeader(sheet.getRange(r, 1, 1, 4), "#D4E6F1"); // 薄青
   r++;
-  sheet.getRange(r, 1, defaultProducts.length, 3).setValues(defaultProducts);
+  sheet.getRange(r, 1, defaultProducts.length, 2).setValues(defaultProducts);
   r += defaultProducts.length;
 
   // 空行
   r++;
 
   // 2. 2種セット (A〜C列)
-  sheet.getRange(r, 1, 1, 3).setValues([["2種セット", "", ""]]);
+  sheet.getRange(r, 1, 1, 3).setValues([["薬A", "薬B", "セット価格"]]);
   styleSectionHeader(sheet.getRange(r, 1, 1, 4), "#FCF3CF"); // 薄黄
   r++;
   sheet.getRange(r, 1, defaultSets2.length, 3).setValues(defaultSets2);
@@ -209,7 +267,7 @@ function setupMasterSheet() {
   r++;
 
   // 3. 3種セット (A〜D列)
-  sheet.getRange(r, 1, 1, 4).setValues([["3種セット", "", "", ""]]);
+  sheet.getRange(r, 1, 1, 4).setValues([["薬A", "薬B", "薬C", "セット価格"]]);
   styleSectionHeader(sheet.getRange(r, 1, 1, 4), "#D5F5E3"); // 薄緑
   r++;
   sheet.getRange(r, 1, defaultSets3.length, 4).setValues(defaultSets3);
@@ -218,7 +276,7 @@ function setupMasterSheet() {
   r++;
 
   // 4. 追加価格 (A〜B列)
-  sheet.getRange(r, 1, 1, 2).setValues([["追加価格", ""]]);
+  sheet.getRange(r, 1, 1, 2).setValues([["商品名", "追加価格"]]);
   styleSectionHeader(sheet.getRange(r, 1, 1, 4), "#EDBB99"); // 薄オレンジ
   r++;
   sheet.getRange(r, 1, defaultAdd.length, 2).setValues(defaultAdd);
@@ -232,7 +290,11 @@ function setupMasterSheet() {
     sheet.autoResizeColumn(col);
   }
 
-  ui.alert("初期設定完了", "「マスタ」シートを縦並び構成で自動生成しました！", ui.ButtonSet.OK);
+  ui.alert(
+    "初期設定完了",
+    "「マスタ」シートを縦並び（日本語ID廃止版）で自動生成しました！",
+    ui.ButtonSet.OK
+  );
 }
 
 /**
