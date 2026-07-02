@@ -597,32 +597,40 @@
         for (const row of DATA.sets3) {
           const [a, b, c, p] = row;
           if (new Set([a, b, c]).size < 3) continue;
-          if (ix[a] == null || ix[b] == null || ix[c] == null) continue;
-          const base = { [a]: 1, [b]: 1, [c]: 1 };
-          const elig = Object.keys(DATA.add).filter((x) => ix[x] != null && !base[x]);
-          const hasTrane500 = a === "trane500" || b === "trane500" || c === "trane500";
-          const bumped = trane2x2 && hasTrane500;
-          const set3Price = bumped ? p + 500 : p;
-          for (let s = 0; s < 1 << elig.length; s++) {
-            const need = Object.assign({}, base);
-            let price = set3Price,
-              adds = [];
-            for (let j = 0; j < elig.length; j++)
-              if (s & (1 << j)) {
-                const x = elig[j];
-                need[x] = 1;
-                price += DATA.add[x];
-                adds.push(x);
-              }
-            deals.push({
-              need,
-              price,
-              kind: "set3",
-              base: [a, b, c],
-              basePrice: set3Price,
-              adds,
-              bumped,
-            });
+          const candidates = [[a, b, c]];
+          if (a === "trane500" || b === "trane500" || c === "trane500") {
+            const alt = [a, b, c].map((x) => (x === "trane500" ? "trane250" : x));
+            candidates.push(alt);
+          }
+          for (const cand of candidates) {
+            const [ca, cb, cc] = cand;
+            if (ix[ca] == null || ix[cb] == null || ix[cc] == null) continue;
+            const base = { [ca]: 1, [cb]: 1, [cc]: 1 };
+            const elig = Object.keys(DATA.add).filter((x) => ix[x] != null && !base[x]);
+            const hasTrane500 = ca === "trane500" || cb === "trane500" || cc === "trane500";
+            const bumped = trane2x2 && hasTrane500;
+            const set3Price = bumped ? p + 500 : p;
+            for (let s = 0; s < 1 << elig.length; s++) {
+              const need = Object.assign({}, base);
+              let price = set3Price,
+                adds = [];
+              for (let j = 0; j < elig.length; j++)
+                if (s & (1 << j)) {
+                  const x = elig[j];
+                  need[x] = 1;
+                  price += DATA.add[x];
+                  adds.push(x);
+                }
+              deals.push({
+                need,
+                price,
+                kind: "set3",
+                base: [ca, cb, cc],
+                basePrice: set3Price,
+                adds,
+                bumped,
+              });
+            }
           }
         }
         const byProd = {};
