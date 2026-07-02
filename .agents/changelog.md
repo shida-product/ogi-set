@@ -12,7 +12,7 @@
 - スプレッドシートをデータソースとし、サイドバーをUIとして動作させるためのGASスクリプト `Code.js` を新規作成。
 - スプレッドシートの1枚のシート「マスタ」から、縦並び（マージン見出し付き）のレイアウトで商品・セット定義を動的に読み込むように実装。商品マスタ定義からグループ（カテゴリ）列を廃止して簡素化。
 - スプレッドシートのカスタムメニューからワンクリックで、簡素化・縦並びされた「マスタ」シートと初期データを自動生成・装飾する全自動セットアップ機能 (`setupMasterSheet`) を `Code.js` に追加。
-- clasp（Google Apps Script CLI）接続を設定し、ローカルから直接GASプロジェクトへデプロイ可能な環境 (.clasp.json, .claspignore, appsscript.json) を構築。
+- clasp（Google Apps Script CLI）接続を設定し、ローカルから直接GASプロジェクトへデプロイ可能な環境 (.clasp.json, .claspignore, appsscript.json) を構築。node_modules 等の不要なライブラリ群がプッシュされないよう .claspignore の除外指定を最適化。
 - `index.html` および `set-price-optimizer.html` にて、GAS環境下（スプレッドシート連携時）ではスプレッドシートからデータを取得する処理を実装し、取得中はローディングを表示。
 - 非GAS環境下（通常のローカル起動やGitHub Pages）では、従来通りファイル内の `DEFAULTS` を使用して動作するフォールバック設計を導入。既存の公開環境を壊さずにスプレッドシート内アプリ化を実現。
 
