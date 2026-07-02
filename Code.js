@@ -99,35 +99,25 @@ function getMasterData() {
 
     if (valA === "") continue;
 
-    // ヘッダー行をパターン検知してセクションを切り替える
-    // 1. 単品価格 (A列が "商品" かつ B列が "単品" または "価格")
-    if (
-      valA.indexOf("商品") !== -1 &&
-      (valB.indexOf("単品") !== -1 || valB.indexOf("価格") !== -1)
-    ) {
+    // ヘッダー行を検知してセクションを切り替える
+    // 1. 単品価格 (A列が "商品名" または "単品価格")
+    if (valA === "商品名" || valA === "単品価格") {
       currentSection = "products";
       continue;
     }
-    // 2. 追加価格 (A列が "商品" かつ B列が "追加")
-    if (valA.indexOf("商品") !== -1 && valB.indexOf("追加") !== -1) {
-      currentSection = "add";
+    // 2. 2種セット (A列が "2種セット")
+    if (valA === "2種セット") {
+      currentSection = "sets2";
       continue;
     }
-    // 3. 3種セット (A列に "薬" が含まれ、かつD列に "価格" または "セット" が含まれる)
-    if (
-      valA.indexOf("薬") !== -1 &&
-      (valD.indexOf("価格") !== -1 || valD.indexOf("セット") !== -1)
-    ) {
+    // 3. 3種セット (A列が "3種セット")
+    if (valA === "3種セット") {
       currentSection = "sets3";
       continue;
     }
-    // 4. 2種セット (A列が "薬" かつ C列に "価格" または "セット" が含まれ、かつD列が空)
-    if (
-      valA.indexOf("薬") !== -1 &&
-      (valC.indexOf("価格") !== -1 || valC.indexOf("セット") !== -1) &&
-      valD === ""
-    ) {
-      currentSection = "sets2";
+    // 4. 追加価格 (A列が "4種目以降の追加" または "追加価格")
+    if (valA === "4種目以降の追加" || valA.indexOf("追加価格") !== -1) {
+      currentSection = "add";
       continue;
     }
 
