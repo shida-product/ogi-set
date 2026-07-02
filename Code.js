@@ -1,6 +1,9 @@
 function onOpen() {
   var ui = SpreadsheetApp.getUi();
-  ui.createMenu("セット会計").addItem("セット会計サポートを起動", "showDialog").addToUi();
+  ui.createMenu("セット会計")
+    .addItem("セット会計サポートを起動", "showDialog")
+    .addItem("マスタシートを初期設定する", "setupMasterSheet")
+    .addToUi();
 
   // 起動時に自動で大画面ダイアログをポップアップ表示
   showDialog();
@@ -158,4 +161,127 @@ function getMasterData() {
     sets3: sets3,
     add: add,
   };
+}
+
+/**
+ * デフォルトデータに基づいて「マスタ」シートを「縦並び（セル結合なし完全日本語版）」で自動生成し、初期設定を行います。
+ */
+function setupMasterSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("マスタ");
+  var ui = SpreadsheetApp.getUi();
+
+  if (sheet) {
+    var response = ui.alert(
+      "マスタシートの上書き確認",
+      "すでに「マスタ」シートが存在します。既存のデータをすべて消去して初期値でリセットしてもよろしいですか？",
+      ui.ButtonSet.YES_NO
+    );
+    if (response !== ui.Button.YES) {
+      return;
+    }
+  } else {
+    sheet = ss.insertSheet("マスタ");
+  }
+
+  sheet.clear();
+
+  // 初期データ (IDやグループは無く、日本語名と数値のみ)
+  var defaultProducts = [
+    ["シナール", 1900],
+    ["ハイチオール", 2100],
+    ["ハイシー顆粒", 1900],
+    ["トラネ500mg「YD」", 3900],
+    ["トラネ250mg「YD」", 2500],
+    ["トランサミン250mg", 2700],
+    ["トランサミン500mg", 4700],
+    ["トコフェロール200mg", 2200],
+    ["ユベラ50mg", 2000],
+    ["ユベラN100mg", 2200],
+    ["ユベラN200mg", 2700],
+    ["ノイロビタン配合錠", 2200],
+  ];
+
+  var defaultSets2 = [
+    ["シナール", "トコフェロール200mg", 3600],
+    ["シナール", "トラネ500mg「YD」", 4800],
+    ["シナール", "トラネ250mg「YD」", 4000],
+    ["シナール", "トランサミン250mg", 4500],
+    ["シナール", "トランサミン500mg", 6000],
+    ["シナール", "ハイチオール", 3300],
+    ["シナール", "ユベラ50mg", 3600],
+    ["シナール", "ユベラN100mg", 3600],
+    ["シナール", "ユベラN200mg", 3900],
+    ["ハイチオール", "トランサミン250mg", 4000],
+    ["ハイチオール", "ハイシー顆粒", 3000],
+    ["ハイチオール", "ユベラN200mg", 4300],
+    ["ハイチオール", "トラネ500mg「YD」", 4800],
+    ["ハイチオール", "トコフェロール200mg", 3700],
+    ["トラネ500mg「YD」", "トコフェロール200mg", 5200],
+    ["トラネ500mg「YD」", "ユベラN200mg", 6000],
+  ];
+
+  var defaultSets3 = [
+    ["シナール", "トラネ500mg「YD」", "トコフェロール200mg", 5900],
+    ["シナール", "トラネ500mg「YD」", "ハイチオール", 5900],
+    ["シナール", "トラネ500mg「YD」", "ユベラ50mg", 5900],
+    ["シナール", "トラネ500mg「YD」", "ユベラN100mg", 6200],
+    ["シナール", "トラネ500mg「YD」", "ユベラN200mg", 6400],
+    ["シナール", "トランサミン500mg", "ユベラN200mg", 7300],
+    ["シナール", "ハイチオール", "ユベラ50mg", 4700],
+    ["シナール", "ハイチオール", "ユベラN100mg", 4700],
+    ["シナール", "ハイチオール", "ユベラN200mg", 5000],
+    ["シナール", "ハイチオール", "トコフェロール200mg", 4600],
+  ];
+
+  var defaultAdd = [
+    ["ハイチオール", 1500],
+    ["トコフェロール200mg", 1500],
+    ["ノイロビタン配合錠", 2000],
+  ];
+
+  // 1. 単品価格の書き込み (A1: 商品名, B1: 単品価格)
+  sheet.getRange(1, 1, 1, 2).setValues([["商品名", "単品価格"]]);
+  sheet.getRange(2, 1, defaultProducts.length, 2).setValues(defaultProducts);
+
+  // 2. 2種セットの書き込み (A15: 2種セット, B15: 薬B, C15: セット価格)
+  sheet.getRange(15, 1, 1, 3).setValues([["2種セット", "薬B", "セット価格"]]);
+  sheet.getRange(16, 1, defaultSets2.length, 3).setValues(defaultSets2);
+
+  // 3. 3種セットの書き込み (A33: 3種セット, B33: 薬B, C33: 薬C, D33: セット価格)
+  sheet.getRange(33, 1, 1, 4).setValues([["3種セット", "薬B", "薬C", "セット価格"]]);
+  sheet.getRange(34, 1, defaultSets3.length, 4).setValues(defaultSets3);
+
+  // 4. 追加価格の書き込み (A45: 4種目以降 of 追加, B45: 追加価格)
+  sheet.getRange(45, 1, 1, 2).setValues([["4種目以降の追加", "追加価格"]]);
+  sheet.getRange(46, 1, defaultAdd.length, 2).setValues(defaultAdd);
+
+  // 見出しセル等のデザイン装飾（結合なしで色付けだけする）
+  var bgColors = {
+    1: "#D4E6F1", // 単品：薄青
+    15: "#FCF3CF", // 2種：薄黄
+    33: "#D5F5E3", // 3種：薄緑
+    45: "#EDBB99", // 追加：薄オレンジ
+  };
+
+  for (var headerRow in bgColors) {
+    var r = Number(headerRow);
+    var range = sheet.getRange(r, 1, 1, 4);
+    range.setFontWeight("bold");
+    range.setBackground(bgColors[headerRow]);
+  }
+
+  // 全体の格子線と幅自動調整
+  sheet
+    .getRange(1, 1, 48, 4)
+    .setBorder(true, true, true, true, true, true, "#D0D3D4", SpreadsheetApp.BorderStyle.SOLID);
+  for (var col = 1; col <= 4; col++) {
+    sheet.autoResizeColumn(col);
+  }
+
+  ui.alert(
+    "初期設定完了",
+    "新しい仕様（セル結合なし）で「マスタ」シートを自動生成しました！",
+    ui.ButtonSet.OK
+  );
 }
