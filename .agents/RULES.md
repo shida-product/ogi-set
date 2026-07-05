@@ -167,9 +167,9 @@
 | 項目           | 内容                                                                                           |
 | -------------- | ---------------------------------------------------------------------------------------------- |
 | プロジェクト名 | オオギ：セット会計サポート（最安組合せ計算ツール）                                             |
-| 主言語         | Web（HTML / CSS / vanilla JS）。単一ファイル `set-price-optimizer.html`                        |
-| 本番 URL       | （未設定）                                                                                     |
-| Danger Zone    | `set-price-optimizer.html` の既存ロジック・価格計算部の無断改変、`.env`、`.github/workflows/*` |
+| 主言語         | Web（HTML / CSS / vanilla JS）＋ GAS（`Code.js`）。UI 本体は `index.html`                      |
+| 本番 URL       | スプレッドシート起動ダイアログ（GAS）。GitHub Pages / スタンドアロン版は廃止                   |
+| Danger Zone    | `index.html` / `Code.js` の価格計算・GAS連携部の無断改変、`.env`、`.github/workflows/*`        |
 
 ### 9-2. Workflow Routing（着手前に何を読むか）
 
