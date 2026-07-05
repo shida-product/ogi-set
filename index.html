@@ -86,16 +86,6 @@
         border-color: var(--teal);
       }
 
-      .group {
-        margin-bottom: 14px;
-      }
-      .group-label {
-        font-size: 11px;
-        letter-spacing: 0.1em;
-        color: var(--ink-soft);
-        font-weight: 700;
-        margin: 0 0 6px 2px;
-      }
       .rows {
         display: flex;
         flex-direction: column;
@@ -479,7 +469,7 @@
           margin-bottom: 24px;
         "
       >
-        <h1 style="margin: 0">セット会計サポート</h1>
+        <h1 style="margin: 0">セット作成サポートツール</h1>
         <button
           id="syncBtn"
           onclick="initApp()"
@@ -502,7 +492,7 @@
       </header>
 
       <div class="step-head">
-        <span class="t">販売する薬を決めて数量を調節</span>
+        <span class="t">薬と数量を選択</span>
       </div>
 
       <div id="groups"></div>
@@ -530,7 +520,7 @@
             <span class="lbl">合計</span><span class="big" id="total">¥0</span>
           </div>
           <div class="meta">
-            <span>単品ばらし <span class="num" id="singlesTotal">¥0</span></span>
+            <span>単品価格 <span class="num" id="singlesTotal">¥0</span></span>
             <span class="save">−<span class="num" id="saved">¥0</span> お得</span>
           </div>
           <div class="actions">
@@ -541,7 +531,7 @@
 
       <div class="foot">
         <b>仕組み：</b
-        >選んだ薬を「単品／2種/3種/3種＋4種目追加」のあらゆる割り方で評価し、<b>合計が最安になる1通り</b>を自動確定します。<br />
+        >選んだ薬を「単品/2種/3種/4種目以降」のあらゆる割り方で評価し、<b>合計が最安になる1通り</b>を自動確定します。<br />
         セットから溢れた薬は、別のセットを組めるなら組み、無理なら単品として最も安くなる形に振り分けます。<br />
         各行は「Squareでどの商品を打つか」の指示です。
       </div>
@@ -551,38 +541,18 @@
       /* ====== 既定データ（画像の価格表） ====== */
       const DEFAULTS = {
         products: [
-          { id: "shinal", name: "シナール", single: 1900, group: "主剤（C・システイン）" },
-          { id: "haichi", name: "ハイチオール", single: 2100, group: "主剤（C・システイン）" },
-          { id: "haishi", name: "ハイシー顆粒", single: 1900, group: "主剤（C・システイン）" },
-          {
-            id: "trane500",
-            name: "トラネ500mg「YD」",
-            single: 3900,
-            group: "肝斑（トラネキサム）系",
-          },
-          {
-            id: "trane250",
-            name: "トラネ250mg「YD」",
-            single: 2500,
-            group: "肝斑（トラネキサム）系",
-          },
-          {
-            id: "transa250",
-            name: "トランサミン250mg",
-            single: 2700,
-            group: "肝斑（トラネキサム）系",
-          },
-          {
-            id: "transa500",
-            name: "トランサミン500mg",
-            single: 4700,
-            group: "肝斑（トラネキサム）系",
-          },
-          { id: "tocoNico", name: "トコフェロール200mg", single: 2200, group: "ビタミンE系" },
-          { id: "yubera50", name: "ユベラ50mg", single: 2000, group: "ビタミンE系" },
-          { id: "yuberaN100", name: "ユベラN100mg", single: 2200, group: "ビタミンE系" },
-          { id: "yuberaN200", name: "ユベラN200mg", single: 2700, group: "ビタミンE系" },
-          { id: "noivitan", name: "ノイロビタン配合錠", single: 2200, group: "その他" },
+          { id: "shinal", name: "シナール", single: 1900 },
+          { id: "haichi", name: "ハイチオール", single: 2100 },
+          { id: "haishi", name: "ハイシー顆粒", single: 1900 },
+          { id: "trane500", name: "トラネ500mg「YD」", single: 3900 },
+          { id: "trane250", name: "トラネ250mg「YD」", single: 2500 },
+          { id: "transa250", name: "トランサミン250mg", single: 2700 },
+          { id: "transa500", name: "トランサミン500mg", single: 4700 },
+          { id: "tocoNico", name: "トコフェロール200mg", single: 2200 },
+          { id: "yubera50", name: "ユベラ50mg", single: 2000 },
+          { id: "yuberaN100", name: "ユベラN100mg", single: 2200 },
+          { id: "yuberaN200", name: "ユベラN200mg", single: 2700 },
+          { id: "noivitan", name: "ノイロビタン配合錠", single: 2200 },
         ],
         sets2: [
           ["shinal", "tocoNico", 3600],
@@ -618,8 +588,8 @@
       };
       const clone = (o) => JSON.parse(JSON.stringify(o));
 
-      /* 価格は HTML 内の DEFAULTS を唯一の正本とする（1元管理・個々のPCでは変更不可）。
-   価格改定時はこのファイルの DEFAULTS を直し、配り直すこと。 */
+      /* 価格の正本はスプレッドシート「マスタ」。GAS起動時に getMasterData() で上書きされる。
+   この DEFAULTS はシート読込に失敗した場合の非常用フォールバックのみ（年次同期は不要）。 */
       let DATA = clone(DEFAULTS);
 
       const P = () => Object.fromEntries(DATA.products.map((p) => [p.id, p]));
@@ -734,15 +704,8 @@
       /* ====== 状態 ====== */
       const qty = {};
 
-      /* ====== 薬リスト（1薬1行） ====== */
+      /* ====== 薬リスト（1薬1行・フラット） ====== */
       const groupsEl = document.getElementById("groups");
-      function groupOrder() {
-        const s = [];
-        DATA.products.forEach((p) => {
-          if (!s.includes(p.group)) s.push(p.group);
-        });
-        return s;
-      }
 
       function renderProducts() {
         const exist = new Set(DATA.products.map((p) => p.id));
@@ -752,40 +715,35 @@
         const optRow = document.getElementById("trane2x2OptRow");
         if (optRow) document.body.appendChild(optRow);
         groupsEl.innerHTML = "";
-        for (const g of groupOrder()) {
-          const wrap = document.createElement("div");
-          wrap.className = "group";
-          const rows = document.createElement("div");
-          rows.className = "rows";
-          for (const p of DATA.products.filter((p) => p.group === g)) {
-            const q = qty[p.id] || 0;
-            const active = q > 0;
-            const row = document.createElement("div");
-            row.className = "drow " + (active ? "active" : "zero");
-            row.dataset.id = p.id;
-            row.innerHTML =
-              `<span class="dname">${p.name}</span><span class="dprice">¥${p.single.toLocaleString()}</span>` +
-              `<span class="qctrl"><button class="qbtn mn" ${active ? "" : "disabled"}>−</button>` +
-              `<span class="q${active ? "" : " is0"}">${q}</span><button class="qbtn pl">＋</button></span>`;
-            row.addEventListener("click", (e) => {
-              const id = p.id;
-              if (e.target.classList.contains("pl")) {
-                qty[id] = (qty[id] || 0) + 1;
-              } else if (e.target.classList.contains("mn")) {
-                qty[id] = (qty[id] || 0) - 1;
-                if (qty[id] <= 0) delete qty[id];
-              } else return;
-              renderProducts();
-              renderReceipt();
-            });
-            rows.appendChild(row);
-            if (p.id === "trane500" && optRow) {
-              rows.appendChild(optRow);
-            }
+        const rows = document.createElement("div");
+        rows.className = "rows";
+        for (const p of DATA.products) {
+          const q = qty[p.id] || 0;
+          const active = q > 0;
+          const row = document.createElement("div");
+          row.className = "drow " + (active ? "active" : "zero");
+          row.dataset.id = p.id;
+          row.innerHTML =
+            `<span class="dname">${p.name}</span><span class="dprice">¥${p.single.toLocaleString()}</span>` +
+            `<span class="qctrl"><button class="qbtn mn" ${active ? "" : "disabled"}>−</button>` +
+            `<span class="q${active ? "" : " is0"}">${q}</span><button class="qbtn pl">＋</button></span>`;
+          row.addEventListener("click", (e) => {
+            const id = p.id;
+            if (e.target.classList.contains("pl")) {
+              qty[id] = (qty[id] || 0) + 1;
+            } else if (e.target.classList.contains("mn")) {
+              qty[id] = (qty[id] || 0) - 1;
+              if (qty[id] <= 0) delete qty[id];
+            } else return;
+            renderProducts();
+            renderReceipt();
+          });
+          rows.appendChild(row);
+          if (p.id === "trane500" && optRow) {
+            rows.appendChild(optRow);
           }
-          wrap.appendChild(rows);
-          groupsEl.appendChild(wrap);
         }
+        groupsEl.appendChild(rows);
         if (optRow && optRow.parentNode === document.body) {
           groupsEl.parentNode.insertBefore(optRow, groupsEl.nextSibling);
         }

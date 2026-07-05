@@ -98,7 +98,6 @@ function getMasterData() {
     var valA = String(row[0] || "").trim();
     var valB = String(row[1] || "").trim();
     var valC = String(row[2] || "").trim();
-    var valD = String(row[3] || "").trim();
 
     if (valA === "") continue;
 
@@ -124,34 +123,28 @@ function getMasterData() {
       continue;
     }
 
-    // データ行の読み取り
+    // データ行の読み取り（valA〜valD は行頭で取得済み）
     if (currentSection === "products") {
-      var sysId = getSystemId(valA);
       products.push({
-        id: sysId,
+        id: getSystemId(valA),
         name: valA,
         single: Number(row[1]) || 0,
-        group: "", // カテゴリ列は廃止
       });
     } else if (currentSection === "sets2") {
-      var valB = String(row[1] || "").trim();
       if (valB !== "") {
-        var idA = getSystemId(valA);
-        var idB = getSystemId(valB);
-        sets2.push([idA, idB, Number(row[2]) || 0]);
+        sets2.push([getSystemId(valA), getSystemId(valB), Number(row[2]) || 0]);
       }
     } else if (currentSection === "sets3") {
-      var valB = String(row[1] || "").trim();
-      var valC = String(row[2] || "").trim();
       if (valB !== "" && valC !== "") {
-        var idA = getSystemId(valA);
-        var idB = getSystemId(valB);
-        var idC = getSystemId(valC);
-        sets3.push([idA, idB, idC, Number(row[3]) || 0]);
+        sets3.push([
+          getSystemId(valA),
+          getSystemId(valB),
+          getSystemId(valC),
+          Number(row[3]) || 0,
+        ]);
       }
     } else if (currentSection === "add") {
-      var sysId = getSystemId(valA);
-      add[sysId] = Number(row[1]) || 0;
+      add[getSystemId(valA)] = Number(row[1]) || 0;
     }
   }
 
