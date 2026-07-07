@@ -44,21 +44,6 @@
         padding: 26px 18px 120px;
       }
 
-      header.top {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        border-bottom: 2px solid var(--ink);
-        padding-bottom: 13px;
-        margin-bottom: 20px;
-      }
-      header.top h1 {
-        font-size: 19px;
-        letter-spacing: 0.02em;
-        margin: 0;
-        font-weight: 700;
-      }
-
       .step-head {
         display: flex;
         align-items: center;
@@ -460,10 +445,8 @@
     </div>
 
     <div class="wrap">
-      <header
-        class="top"
-        style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 24px"
-      >
+      <div class="step-head">
+        <span class="t">薬と数量を選択</span>
         <button
           id="syncBtn"
           onclick="initApp()"
@@ -483,10 +466,6 @@
         >
           🔄 再読込
         </button>
-      </header>
-
-      <div class="step-head">
-        <span class="t">薬と数量を選択</span>
       </div>
 
       <div id="groups"></div>
