@@ -14,10 +14,10 @@ function onOpen() {
  */
 function showDialog() {
   var html = HtmlService.createHtmlOutputFromFile("index")
-    .setTitle("セット会計サポート")
+    .setTitle("セット作成サポートツール")
     .setWidth(680)
     .setHeight(850);
-  SpreadsheetApp.getUi().showModelessDialog(html, "セット会計サポート");
+  SpreadsheetApp.getUi().showModelessDialog(html, "セット作成サポートツール");
 }
 
 // 日本語名からアルファベットのシステムIDに変換するための自動マッピングキャッシュ
@@ -136,12 +136,7 @@ function getMasterData() {
       }
     } else if (currentSection === "sets3") {
       if (valB !== "" && valC !== "") {
-        sets3.push([
-          getSystemId(valA),
-          getSystemId(valB),
-          getSystemId(valC),
-          Number(row[3]) || 0,
-        ]);
+        sets3.push([getSystemId(valA), getSystemId(valB), getSystemId(valC), Number(row[3]) || 0]);
       }
     } else if (currentSection === "add") {
       add[getSystemId(valA)] = Number(row[1]) || 0;
